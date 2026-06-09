@@ -113,11 +113,11 @@ harness   harness  context   arch    quality  sandbox  observ   entropy  harness
 
 ## 兼容
 
-| 工具 | 方式 |
-|------|------|
-| Claude Code | `.claude/agents/` + `.claude/skills/` 原生 |
-| Codex | `AGENTS.md` + `docs/` 结构 |
-| OpenCode | Skill 系统 |
+| 工具 | Skill 路径 | 方式 |
+|------|-----------|------|
+| Claude Code | `.claude/skills/` | 原生 |
+| Codex | `.agents/skills/` | 原生 |
+| OpenCode | `.claude/skills/` + `.agents/skills/` | 原生（两个路径都扫描） |
 
 ---
 
