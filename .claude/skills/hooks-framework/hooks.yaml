@@ -1,0 +1,65 @@
+# hooks.yaml — Harness 执行钩子配置
+#
+# 此文件定义 agent 执行周期各阶段的钩子。
+# 由 run-hooks.sh 读取并执行。
+#
+# 钩子类型:
+#   pre_execution  — agent 开始工作前运行
+#   post_execution — agent 完成一轮工作后运行
+#   interception   — 特定信号出现时拦截并重定向
+#   observation    — 记录 agent 行为用于后续分析
+#
+# fail_action:
+#   warn       — 打印警告，继续执行
+#   block      — 阻塞后续流程
+#   retry_once — 重试一次，仍失败则跳过
+#   ignore     — 静默忽略
+
+hooks:
+  # ─────────────────────────────────────────────
+  # Pre-execution: agent 开始前
+  # ─────────────────────────────────────────────
+  pre_execution:
+    - name: context-check
+      description: 检查 AGENTS.md 新鲜度和完整性
+      fail_action: warn
+
+    - name: env-verify
+      description: 验证开发环境就绪
+      fail_action: warn
+
+  # ─────────────────────────────────────────────
+  # Post-execution: agent 完成后
+  # ─────────────────────────────────────────────
+  post_execution:
+    - name: lint-check
+      description: 架构边界和品味不变量检查
+      fail_action: retry_once
+
+    - name: test-run
+      description: 运行项目测试套件
+      fail_action: retry_once
+
+  # ─────────────────────────────────────────────
+  # Interception: 拦截信号
+  # ─────────────────────────────────────────────
+  interception:
+    - name: continuation
+      description: Ralph Loop — 检测中断并生成续行提示
+      trigger: agent_exit_without_completion
+
+    - name: compaction
+      description: 上下文压缩 — 文件过多时生成摘要
+      trigger: workspace_file_count_gt_10
+
+  # ─────────────────────────────────────────────
+  # Observation: 记录行为
+  # ─────────────────────────────────────────────
+  observation:
+    - name: trace-log
+      description: 记录 git 状态和变更文件
+      always: true
+
+    - name: quality-metric
+      description: 追踪质量指标（覆盖率、TODO 数、文件大小）
+      always: true
