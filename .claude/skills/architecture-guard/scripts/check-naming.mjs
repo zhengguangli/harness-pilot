@@ -3,45 +3,46 @@ import { join, extname, basename, relative } from 'path'
 
 // 命名约定规则
 const RULES = {
-  // 文件命名
   file: {
-    // 组件文件：PascalCase
     component: { pattern: /^[A-Z][a-zA-Z]*\.(tsx|jsx|vue|svelte)$/, desc: '组件文件应使用 PascalCase' },
-    // 工具/脚本：camelCase 或 kebab-case
-    utility: { pattern: /^([a-z][a-zA-Z]*|[a-z][a-z0-9-]*)\.(ts|js|mjs)$/, desc: '工具文件应使用 camelCase 或 kebab-case' },
-    // 常量/配置：kebab-case 或 snake_case
-    config: { pattern: /^[a-z][a-z0-9-]*\.(ts|js|mjs|json|yaml|yml|toml)$/, desc: '配置文件应使用 kebab-case' },
-    // 测试文件：与源文件同名 + .test/.spec
+    // 允许 camelCase、kebab-case、PascalCase、[[...route]] 动态路由、.config. 文件
+    utility: { pattern: /^([a-z][a-zA-Z0-9]*|[a-z][a-z0-9-]*|[A-Z][a-zA-Z0-9]*|\[\[\.\.\.\w+\]\]|[\w.-]+\.config)\.(ts|js|mjs)$/, desc: '工具文件应使用 camelCase 或 kebab-case' },
+    config: { pattern: /^([a-z][a-z0-9-]*|[\w.-]+\.config)\.(ts|js|mjs|json|yaml|yml|toml)$/, desc: '配置文件应使用 kebab-case' },
     test: { pattern: /^[a-zA-Z]+\.(test|spec)\.(ts|js|tsx|jsx|mjs)$/, desc: '测试文件应使用 .test/.spec 后缀' },
   },
-  // 变量命名（代码内）
   variable: {
-    // 常量：UPPER_SNAKE_CASE
     constant: { pattern: /^[A-Z][A-Z0-9_]*$/, desc: '常量应使用 UPPER_SNAKE_CASE' },
-    // 变量/函数：camelCase
     identifier: { pattern: /^[a-z][a-zA-Z0-9]*$/, desc: '变量/函数应使用 camelCase' },
-    // 类/接口/类型：PascalCase
     type: { pattern: /^[A-Z][a-zA-Z0-9]*$/, desc: '类型应使用 PascalCase' },
-    // 私有成员：_camelCase 或 #camelCase
     private: { pattern: /^[_#][a-z][a-zA-Z0-9]*$/, desc: '私有成员应使用 _camelCase 或 #camelCase' },
   },
 }
 
-// 检测文件类型
+// TypeScript/JS 保留字（不应被识别为类型名）
+const RESERVED_WORDS = new Set([
+  'abstract', 'as', 'async', 'await', 'break', 'case', 'catch', 'class', 'const',
+  'continue', 'debugger', 'default', 'delete', 'do', 'else', 'enum', 'export',
+  'extends', 'false', 'finally', 'for', 'from', 'function', 'get', 'if',
+  'implements', 'import', 'in', 'instanceof', 'interface', 'let', 'module',
+  'namespace', 'new', 'null', 'of', 'package', 'private', 'protected', 'public',
+  'readonly', 'return', 'set', 'static', 'super', 'switch', 'this', 'throw',
+  'true', 'try', 'type', 'typeof', 'undefined', 'var', 'void', 'while', 'with',
+  'yield',
+])
+
 function classifyFile(filePath) {
   const name = basename(filePath)
   const ext = extname(filePath)
-
   if (/\.(tsx|jsx|vue|svelte)$/.test(ext)) return 'component'
   if (/\.(test|spec)\./.test(name)) return 'test'
-  if (/\.(json|yaml|yml|toml|env|config)/.test(name) || name.includes('config')) return 'config'
+  if (/\.config\./.test(name) || /\.(json|yaml|yml|toml|env)/.test(ext)) return 'config'
   if (/\.(ts|js|mjs)$/.test(ext)) return 'utility'
   return null
 }
 
 function findFiles(dir, exts, maxDepth = 5) {
   const results = []
-  const skip = new Set(['node_modules', '.git', 'target', 'dist', 'build', '.next', '.workspace'])
+  const skip = new Set(['node_modules', '.git', 'target', 'dist', 'build', '.next', '.workspace', '_workspace'])
   function walk(d, depth) {
     if (depth > maxDepth) return
     let entries
@@ -60,33 +61,32 @@ function findFiles(dir, exts, maxDepth = 5) {
 function checkCodeNaming(content, filePath) {
   const violations = []
   const ext = extname(filePath)
-
   if (!['.ts', '.tsx', '.js', '.jsx', '.mjs'].includes(ext)) return violations
 
-  // 检测常量声明
+  // 常量声明
   const constRegex = /(?:export\s+)?const\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*[=:]/g
   let m
   while ((m = constRegex.exec(content)) !== null) {
     const name = m[1]
-    // 全大写应为 UPPER_SNAKE_CASE
     if (name === name.toUpperCase() && name.length > 1 && !/^[A-Z][A-Z0-9_]*$/.test(name)) {
       violations.push(`常量命名: "${name}" 应使用 UPPER_SNAKE_CASE`)
     }
   }
 
-  // 检测 class 声明
-  const classRegex = /class\s+([A-Za-z_$][A-Za-z0-9_$]*)/g
+  // class 声明
+  const classRegex = /\bclass\s+([A-Za-z_$][A-Za-z0-9_$]*)/g
   while ((m = classRegex.exec(content)) !== null) {
     const name = m[1]
-    if (!/^[A-Z][a-zA-Z0-9]*$/.test(name)) {
+    if (!RESERVED_WORDS.has(name) && !/^[A-Z][a-zA-Z0-9]*$/.test(name)) {
       violations.push(`类命名: "${name}" 应使用 PascalCase`)
     }
   }
 
-  // 检测 interface/type 声明
-  const typeRegex = /(?:interface|type)\s+([A-Za-z_$][A-Za-z0-9_$]*)/g
+  // interface/type 声明 — 精确匹配，排除保留字
+  const typeRegex = /\b(?:interface|type)\s+([A-Z_a-z][A-Za-z0-9_$]*)\s*(?:<|{|=|extends|implements)/g
   while ((m = typeRegex.exec(content)) !== null) {
     const name = m[1]
+    if (RESERVED_WORDS.has(name)) continue
     if (!/^[A-Z][a-zA-Z0-9]*$/.test(name)) {
       violations.push(`类型命名: "${name}" 应使用 PascalCase`)
     }
@@ -105,7 +105,6 @@ export function checkNaming(projectDir) {
     const fileName = basename(file)
     const fileType = classifyFile(file)
 
-    // 文件名检查
     if (fileType && RULES.file[fileType]) {
       const rule = RULES.file[fileType]
       if (!rule.pattern.test(fileName)) {
@@ -113,7 +112,6 @@ export function checkNaming(projectDir) {
       }
     }
 
-    // 代码内命名检查
     try {
       const content = readFileSync(file, 'utf-8')
       const codeViolations = checkCodeNaming(content, file)

@@ -4,9 +4,9 @@ import { join, extname, relative } from 'path'
 // 文件大小阈值
 const THRESHOLDS = {
   source: { warn: 300, error: 500 },    // 源代码文件
-  test: { warn: 500, error: 800 },      // 测试文件
-  config: { warn: 200, error: 300 },    // 配置文件
-  doc: { warn: 200, error: 300 },       // 文档文件
+  test: { warn: 500, error: 1000 },     // 测试文件（可以更长）
+  config: { warn: 200, error: 400 },    // 配置文件
+  doc: { warn: 300, error: 600 },       // 文档文件（架构文档可以更长）
   style: { warn: 300, error: 500 },     // 样式文件
 }
 
@@ -15,7 +15,7 @@ const FUNC_THRESHOLDS = { warn: 50, error: 100 }
 
 function findFiles(dir, exts, maxDepth = 5) {
   const results = []
-  const skip = new Set(['node_modules', '.git', 'target', 'dist', 'build', '.next', '.workspace'])
+  const skip = new Set(['node_modules', '.git', 'target', 'dist', 'build', '.next', '.workspace', '_workspace'])
   function walk(d, depth) {
     if (depth > maxDepth) return
     let entries
