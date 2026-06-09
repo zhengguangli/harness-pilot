@@ -1,5 +1,9 @@
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync, mkdirSync, appendFileSync } from 'fs'
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
+
+function readFileSafe(path) {
+  try { return readFileSync(path, 'utf-8') } catch { return '' }
+}
 
 export function compaction(projectDir) {
   const ws = join(projectDir, '.workspace')
@@ -18,20 +22,33 @@ export function compaction(projectDir) {
     }
   } catch {}
 
-  const decisionFiles = []
-  try {
-    for (const f of readdirSync(ws)) {
-      if (!f.endsWith('.md')) continue
-      try {
-        const content = readFileSync(join(ws, f), 'utf-8')
-        if (/决策|decision|选择|确定/.test(content)) decisionFiles.push(f)
-        if (decisionFiles.length >= 5) break
-      } catch {}
+  // 读取最近的 trace log
+  let recentTrace = ''
+  const traceDir = join(ws, 'trace')
+  if (existsSync(traceDir)) {
+    const traceFiles = readdirSync(traceDir).filter(f => f.startsWith('trace_')).sort().slice(-1)
+    if (traceFiles.length > 0) {
+      const content = readFileSafe(join(traceDir, traceFiles[0]))
+      const lines = content.trim().split('\n')
+      recentTrace = lines.slice(-5).join('\n')
     }
-  } catch {}
+  }
 
-  const currentTask = existsSync(join(ws, 'current_task.md')) ? readFileSync(join(ws, 'current_task.md'), 'utf-8') : '无任务记录'
-  const decisions = decisionFiles.map(f => `### ${f}`).join('\n') || '无'
+  // 读取最新的质量指标
+  let qualityInfo = ''
+  const metricsDir = join(ws, 'metrics')
+  if (existsSync(metricsDir)) {
+    const metricFiles = readdirSync(metricsDir).filter(f => f.startsWith('quality_')).sort().slice(-1)
+    if (metricFiles.length > 0) {
+      qualityInfo = readFileSafe(join(metricsDir, metricFiles[0]))
+    }
+  }
+
+  // 读取当前任务
+  const currentTask = existsSync(join(ws, 'current_task.md')) ? readFileSafe(join(ws, 'current_task.md')) : '无任务记录'
+
+  // 读取续行提示（如果有）
+  const continuationPrompt = existsSync(join(ws, 'continuation_prompt.md')) ? readFileSafe(join(ws, 'continuation_prompt.md')) : ''
 
   const summary = `# 上下文摘要
 
@@ -39,18 +56,22 @@ export function compaction(projectDir) {
 **workspace 文件数:** ${fileCount}
 **workspace 大小:** ${(totalSize / 1024).toFixed(1)}KB
 
-## 关键决策记录
-
-${decisions}
-
-## 未完成任务
+## 当前任务
 
 ${currentTask}
+
+## 最近执行记录
+
+${recentTrace || '无'}
+
+## 质量指标
+
+${qualityInfo || '无'}
+
+${continuationPrompt ? `## 待续行\n\n${continuationPrompt}` : ''}
 `
 
   writeFileSync(join(ws, 'context_summary.md'), summary)
-
-  // 输出到 stdout — Claude Code PreCompact hook 会注入到新上下文
   console.log(summary)
 
   return { exitCode: 0, message: '[compaction] 摘要已生成' }
@@ -58,12 +79,6 @@ ${currentTask}
 
 if (process.argv[1]?.endsWith('compaction.mjs')) {
   const dir = process.env.CLAUDE_PROJECT_DIR || process.env.PROJECT_DIR || process.cwd()
-  // 调试标记 — 每次执行都写入，用于验证 hook 是否真的触发
-  try {
-    const ws = join(dir, '.workspace')
-    mkdirSync(ws, { recursive: true })
-    appendFileSync(join(ws, 'hook_debug.log'), `${new Date().toISOString()} PreCompact hook fired\n`)
-  } catch {}
   const r = compaction(dir)
   if (r.message) console.error(r.message)
   process.exit(0)

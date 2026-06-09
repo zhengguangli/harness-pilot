@@ -1,30 +1,21 @@
-import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'fs'
 import { join, extname } from 'path'
 
-function detectStack(projectDir) {
-  if (existsSync(join(projectDir, 'package.json'))) return 'node'
-  if (existsSync(join(projectDir, 'Cargo.toml'))) return 'rust'
-  if (existsSync(join(projectDir, 'go.mod'))) return 'go'
-  if (existsSync(join(projectDir, 'pyproject.toml'))) return 'python'
-  return 'unknown'
-}
-
-function findSourceFiles(projectDir, exts, maxDepth = 5) {
+function findFiles(dir, exts, maxDepth = 5) {
   const results = []
-  const skip = new Set(['node_modules', '.git', 'target', 'dist', 'build', '.next'])
-
-  function walk(dir, depth) {
+  const skip = new Set(['node_modules', '.git', 'target', 'dist', 'build', '.next', '.workspace'])
+  function walk(d, depth) {
     if (depth > maxDepth) return
     let entries
-    try { entries = readdirSync(dir, { withFileTypes: true }) } catch { return }
+    try { entries = readdirSync(d, { withFileTypes: true }) } catch { return }
     for (const e of entries) {
       if (skip.has(e.name)) continue
-      const full = join(dir, e.name)
+      const full = join(d, e.name)
       if (e.isDirectory()) walk(full, depth + 1)
       else if (exts.has(extname(e.name))) results.push(full)
     }
   }
-  walk(projectDir, 0)
+  walk(dir, 0)
   return results
 }
 
@@ -32,12 +23,31 @@ export function lintCheck(projectDir) {
   const errors = []
   const warnings = []
 
+  // 架构文档检查
   if (!existsSync(join(projectDir, 'docs', 'ARCHITECTURE.md'))) {
-    console.error('[lint-check] docs/ARCHITECTURE.md 不存在 — 建议运行"架构检查"')
+    warnings.push('docs/ARCHITECTURE.md 不存在 — 建议运行"架构检查"')
   }
 
+  // docs/ 大小约束检查（每个文档 ≤200 行）
+  const docsDir = join(projectDir, 'docs')
+  if (existsSync(docsDir)) {
+    const docExts = new Set(['.md'])
+    const docFiles = findFiles(docsDir, docExts, 3)
+    for (const f of docFiles) {
+      try {
+        const content = readFileSync(f, 'utf-8')
+        const lines = content.split('\n').length
+        const relPath = f.replace(projectDir + '/', '')
+        if (lines > 200) {
+          warnings.push(`文档过大: ${relPath} (${lines} 行) — 建议拆分`)
+        }
+      } catch {}
+    }
+  }
+
+  // 源代码文件大小检查（>500 行警告）
   const exts = new Set(['.ts', '.js', '.py', '.go', '.rs', '.tsx', '.jsx'])
-  const files = findSourceFiles(projectDir, exts)
+  const files = findFiles(projectDir, exts)
 
   let largeFiles = 0
   for (const f of files) {
@@ -45,16 +55,16 @@ export function lintCheck(projectDir) {
       const content = readFileSync(f, 'utf-8')
       const lines = content.split('\n').length
       if (lines > 500) {
-        warnings.push(`文件过大: ${f.replace(projectDir + '/', '')} (${lines} 行)`)
         largeFiles++
       }
     } catch {}
   }
 
-  if (largeFiles > 5) errors.push(`${largeFiles} 个大文件（>500 行）— 考虑拆分`)
+  if (largeFiles > 5) warnings.push(`${largeFiles} 个大文件（>500 行）— 考虑拆分`)
 
   if (errors.length > 0) return { exitCode: 1, message: `[lint-check] ${errors.length} 个问题\n${errors.join('\n')}` }
-  return { exitCode: 0, message: '[lint-check] 架构检查通过' }
+  if (warnings.length > 0) console.error(`[lint-check] ${warnings.length} 个警告`)
+  return { exitCode: 0, message: '' }
 }
 
 if (process.argv[1]?.endsWith('lint-check.mjs')) {

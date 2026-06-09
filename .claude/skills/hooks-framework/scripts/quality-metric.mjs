@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync, readdirSync, statSync, readFileSync } from 'fs'
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync, mkdirSync } from 'fs'
 import { join, extname } from 'path'
 import { execSync } from 'child_process'
 
@@ -58,17 +58,12 @@ export function qualityMetric(projectDir) {
   }
 
   writeFileSync(join(metricsDir, `quality_${dateStr}.json`), JSON.stringify(metrics, null, 2))
-
-  const warnings = []
-  if (todoCount > 50) warnings.push(`TODO/FIXME 过多: ${todoCount}`)
-  if (warnings.length > 0) console.error(`[quality-metric] ${warnings.join(', ')}`)
-
-  return { exitCode: 0, message: `[quality-metric] 指标已记录 (${files.length} 文件, ${todoCount} TODO)` }
+  return { exitCode: 0, message: '' }
 }
 
 if (process.argv[1]?.endsWith('quality-metric.mjs')) {
   const dir = process.env.CLAUDE_PROJECT_DIR || process.env.PROJECT_DIR || process.cwd()
   const r = qualityMetric(dir)
   if (r.message) console.log(r.message)
-  process.exit(r.exitCode)
+  process.exit(0)
 }

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, appendFileSync } from 'fs'
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync, mkdirSync, appendFileSync } from 'fs'
 import { join } from 'path'
 import { execSync } from 'child_process'
 
@@ -23,17 +23,11 @@ export function traceLog(projectDir) {
   const line = `${ts} [INFO] git: ${gitInfo}\n`
   appendFileSync(logFile, line)
 
-  return { exitCode: 0, message: `[trace-log] 已记录到: trace_${dateStr}.log` }
+  return { exitCode: 0, message: '' }
 }
 
 if (process.argv[1]?.endsWith('trace-log.mjs')) {
   const dir = process.env.CLAUDE_PROJECT_DIR || process.env.PROJECT_DIR || process.cwd()
-  // 调试标记
-  try {
-    const ws = join(dir, '.workspace')
-    mkdirSync(ws, { recursive: true })
-    appendFileSync(join(ws, 'hook_debug.log'), `${new Date().toISOString()} Stop hook (trace-log) fired\n`)
-  } catch {}
   const r = traceLog(dir)
   if (r.message) console.log(r.message)
   process.exit(0)

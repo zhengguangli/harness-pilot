@@ -3,7 +3,7 @@ import { join } from 'path'
 
 export function continuation(projectDir) {
   const ws = join(projectDir, '.workspace')
-  if (!existsSync(ws)) return { exitCode: 0, message: '[continuation] .workspace/ 不存在 — 无续行上下文' }
+  if (!existsSync(ws)) return { exitCode: 0, message: '' }
 
   let interrupted = false
   let reason = ''
@@ -35,7 +35,7 @@ export function continuation(projectDir) {
     }
   } catch {}
 
-  if (!interrupted) return { exitCode: 0, message: '[continuation] 无中断信号 — 正常继续' }
+  if (!interrupted) return { exitCode: 0, message: '' }
 
   const currentTask = existsSync(taskFile) ? readFileSync(taskFile, 'utf-8') : '无任务记录'
   const progressFiles = readdirSync(ws).filter(f => f.startsWith('progress_') && f.endsWith('.md')).slice(0, 3)
@@ -53,6 +53,6 @@ export function continuation(projectDir) {
 if (process.argv[1]?.endsWith('continuation.mjs')) {
   const dir = process.env.CLAUDE_PROJECT_DIR || process.env.PROJECT_DIR || process.cwd()
   const r = continuation(dir)
-  if (r.message) console.log(r.message)
-  process.exit(r.exitCode)
+  if (r.message) console.error(r.message)
+  process.exit(0)
 }

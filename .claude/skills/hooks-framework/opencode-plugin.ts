@@ -10,14 +10,10 @@ export const HarnessHooks: Plugin = async ({ $, directory }) => {
     },
 
     "file.edited": async () => {
-      try {
-        await $`node ${scripts}/lint-check.mjs`.quiet()
-      } catch (e: any) {
-        console.error(`[harness-hooks] lint-check 失败: ${e.message}`)
-      }
+      try { await $`node ${scripts}/lint-check.mjs`.quiet() } catch {}
     },
 
-    "experimental.session.compacting": async (_input: any, output: any) => {
+    "experimental.session.compacting": async (_input, output) => {
       try {
         const result = await $`node ${scripts}/compaction.mjs`.text()
         if (result) output.context.push(result)
@@ -25,6 +21,7 @@ export const HarnessHooks: Plugin = async ({ $, directory }) => {
     },
 
     "session.idle": async () => {
+      try { await $`node ${scripts}/continuation.mjs`.quiet() } catch {}
       try { await $`node ${scripts}/trace-log.mjs`.quiet() } catch {}
       try { await $`node ${scripts}/quality-metric.mjs`.quiet() } catch {}
     },

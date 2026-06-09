@@ -709,6 +709,7 @@ install_claude_hooks() {
     "Stop": [
       {
         "hooks": [
+          {"type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/skills/hooks-framework/scripts/continuation.mjs"]},
           {"type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/skills/hooks-framework/scripts/trace-log.mjs"]},
           {"type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/skills/hooks-framework/scripts/quality-metric.mjs"]}
         ]
@@ -797,6 +798,7 @@ install_codex_hooks() {
     "Stop": [
       {
         "hooks": [
+          {"type": "command", "command": "node", "args": ["$(git rev-parse --show-toplevel)/.claude/skills/hooks-framework/scripts/continuation.mjs"]},
           {"type": "command", "command": "node", "args": ["$(git rev-parse --show-toplevel)/.claude/skills/hooks-framework/scripts/trace-log.mjs"]},
           {"type": "command", "command": "node", "args": ["$(git rev-parse --show-toplevel)/.claude/skills/hooks-framework/scripts/quality-metric.mjs"]}
         ]
@@ -845,6 +847,7 @@ export const HarnessHooks: Plugin = async ({ $, directory }) => {
     },
 
     "session.idle": async () => {
+      try { await $`node ${scripts}/continuation.mjs`.quiet() } catch {}
       try { await $`node ${scripts}/trace-log.mjs`.quiet() } catch {}
       try { await $`node ${scripts}/quality-metric.mjs`.quiet() } catch {}
     },

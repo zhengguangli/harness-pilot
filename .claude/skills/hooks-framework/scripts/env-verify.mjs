@@ -1,8 +1,7 @@
-import { existsSync, readdirSync, readFileSync } from 'fs'
-import { join, extname } from 'path'
+import { existsSync, readdirSync } from 'fs'
+import { join } from 'path'
 
 export function envVerify(projectDir) {
-  const errors = []
   const warnings = []
 
   for (const file of ['AGENTS.md', 'CLAUDE.md']) {
@@ -22,9 +21,8 @@ export function envVerify(projectDir) {
     warnings.push('.claude/ 目录不存在 — harness 未安装')
   }
 
-  if (errors.length > 0) return { exitCode: 1, message: errors.join('\n') }
   if (warnings.length > 0) console.error(`[env-verify] ${warnings.length} 个警告`)
-  return { exitCode: 0, message: '[env-verify] 环境就绪' }
+  return { exitCode: 0, message: '' }
 }
 
 if (process.argv[1]?.endsWith('env-verify.mjs')) {
