@@ -113,11 +113,13 @@ harness   harness  context   arch    quality  sandbox  observ   entropy  harness
 
 ## 兼容
 
-| 工具 | Skill 路径 | 方式 |
-|------|-----------|------|
+| 工具 | Skill 路径 | 优先级 |
+|------|-----------|--------|
 | Claude Code | `.claude/skills/` | 原生 |
 | Codex | `.agents/skills/` | 原生 |
-| OpenCode | `.claude/skills/` + `.agents/skills/` | 原生（两个路径都扫描） |
+| OpenCode | `.opencode/skills/` > `.claude/skills/` > `.agents/skills/` | 原生（三级回退） |
+
+安装脚本自动将 skills 同步到三个目录，确保每个工具都用最高优先级路径。
 
 ---
 

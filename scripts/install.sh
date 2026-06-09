@@ -525,26 +525,48 @@ install_docs_structure() {
 }
 
 # ============================================================================
-# Codex 适配：同步 skill 定义到 .agents/skills/
+# 多工具适配：同步 skill 定义到 .opencode/skills/ 和 .agents/skills/
 # ============================================================================
 sync_codex_docs() {
-  local dest="${TARGET_DIR}/.agents/skills"
-  mkdir -p "$dest"
-  
   local skills=(harness-orchestrator harness-init context-setup architecture-guard entropy-gc observability-setup sandbox-exec quality-gate agent-readability harness-evolve hooks-framework)
+  
+  # 同步到 .opencode/skills/（OpenCode 原生，最高优先级）
+  local opencode_dest="${TARGET_DIR}/.opencode/skills"
+  mkdir -p "$opencode_dest"
   for skill in "${skills[@]}"; do
     local src="${TARGET_DIR}/.claude/skills/${skill}/SKILL.md"
-    local dst="${dest}/${skill}/SKILL.md"
+    local dst="${opencode_dest}/${skill}/SKILL.md"
     if [[ -f "$src" ]]; then
-      mkdir -p "${dest}/${skill}"
+      mkdir -p "${opencode_dest}/${skill}"
+      if [[ "$DRY_RUN" == "true" ]]; then
+        log "[dry-run] OpenCode 同步: .opencode/skills/${skill}/SKILL.md"
+      elif [[ ! -f "$dst" ]] || [[ "$src" -nt "$dst" ]]; then
+        cp "$src" "$dst"
+        for subdir in references scripts; do
+          if [[ -d "${TARGET_DIR}/.claude/skills/${skill}/${subdir}" ]]; then
+            cp -r "${TARGET_DIR}/.claude/skills/${skill}/${subdir}" "${opencode_dest}/${skill}/${subdir}"
+          fi
+        done
+        ok "OpenCode 同步: .opencode/skills/${skill}/"
+      fi
+    fi
+  done
+  
+  # 同步到 .agents/skills/（Codex 原生）
+  local codex_dest="${TARGET_DIR}/.agents/skills"
+  mkdir -p "$codex_dest"
+  for skill in "${skills[@]}"; do
+    local src="${TARGET_DIR}/.claude/skills/${skill}/SKILL.md"
+    local dst="${codex_dest}/${skill}/SKILL.md"
+    if [[ -f "$src" ]]; then
+      mkdir -p "${codex_dest}/${skill}"
       if [[ "$DRY_RUN" == "true" ]]; then
         log "[dry-run] Codex 同步: .agents/skills/${skill}/SKILL.md"
       elif [[ ! -f "$dst" ]] || [[ "$src" -nt "$dst" ]]; then
         cp "$src" "$dst"
-        # 同步子目录
         for subdir in references scripts; do
           if [[ -d "${TARGET_DIR}/.claude/skills/${skill}/${subdir}" ]]; then
-            cp -r "${TARGET_DIR}/.claude/skills/${skill}/${subdir}" "${dest}/${skill}/${subdir}"
+            cp -r "${TARGET_DIR}/.claude/skills/${skill}/${subdir}" "${codex_dest}/${skill}/${subdir}"
           fi
         done
         ok "Codex 同步: .agents/skills/${skill}/"
@@ -608,7 +630,7 @@ main() {
     echo "  ├─ CLAUDE.md — 新建"
   fi
   
-  echo "  └─ docs/ + .agents/skills/ — 补充缺失 + Codex 同步"
+  echo "  └─ docs/ + .opencode/skills/ + .agents/skills/ — 三轨同步"
   echo ""
   
   if [[ "$DRY_RUN" == "true" ]]; then
