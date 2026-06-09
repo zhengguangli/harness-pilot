@@ -22,6 +22,7 @@ VERSION="1.1.0"
 TARGET_DIR="."
 DRY_RUN=false
 SKIP_CONFIRM=false
+TOOL="claude"  # 默认 Claude Code
 
 # Marker 标记 harness 注入区域
 MARKER_START="<!-- HARNESS-PILOT:START -->"
@@ -47,23 +48,24 @@ skip()  { echo -e "${CYAN}[skip]${NC} $*"; }
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --dir)        TARGET_DIR="$2"; shift 2 ;;
+    --tool)       TOOL="$2"; shift 2 ;;
     --dry-run)    DRY_RUN=true; shift ;;
     --yes|-y)     SKIP_CONFIRM=true; shift ;;
     --version)    echo "harness-pilot v${VERSION}"; exit 0 ;;
     --help|-h)
-      echo "用法: install.sh [--dir <path>] [--dry-run] [--yes]"
+      echo "用法: install.sh [--dir <path>] [--tool <name>] [--dry-run] [--yes]"
       echo ""
       echo "选项:"
       echo "  --dir <path>   目标项目目录 (默认: 当前目录)"
+      echo "  --tool <name>  目标 AI 工具 (默认: claude)"
+      echo "                   claude   — 安装到 .claude/skills/"
+      echo "                   codex    — 安装到 .agents/skills/"
+      echo "                   opencode — 安装到 .opencode/skills/"
+      echo "                   all      — 安装到全部三个目录"
       echo "  --dry-run      仅预览，不实际写入"
       echo "  --yes, -y      跳过确认提示"
       echo "  --version      显示版本号"
       echo "  --help, -h     显示帮助"
-      echo ""
-      echo "行为:"
-      echo "  已有 AGENTS.md / CLAUDE.md → 增量注入 harness 区域，不覆盖"
-      echo "  已有 agents / skills        → 仅补充缺失文件，不覆盖"
-      echo "  已有 docs/                  → 仅创建缺失目录和骨架，不覆盖"
       exit 0
       ;;
     *) err "未知参数: $1"; exit 1 ;;
@@ -404,11 +406,18 @@ install_agents() {
 }
 
 # ============================================================================
-# Skill 安装（仅补充缺失）
+# 按工具类型安装 skills
 # ============================================================================
 install_skills() {
-  local dest="${TARGET_DIR}/.claude/skills"
-  mkdir -p "$dest"
+  # 确定目标目录列表
+  local skill_dirs=()
+  case "$TOOL" in
+    claude)   skill_dirs=(".claude/skills") ;;
+    codex)    skill_dirs=(".agents/skills") ;;
+    opencode) skill_dirs=(".opencode/skills") ;;
+    all)      skill_dirs=(".claude/skills" ".agents/skills" ".opencode/skills") ;;
+    *)        err "未知工具: $TOOL (可选: claude, codex, opencode, all)"; exit 1 ;;
+  esac
   
   local skills=(
     "harness-orchestrator"
@@ -424,47 +433,40 @@ install_skills() {
     "hooks-framework"
   )
   
-  for skill in "${skills[@]}"; do
-    local skill_dir="${dest}/${skill}"
-    local skill_file="${skill_dir}/SKILL.md"
+  for dest_dir in "${skill_dirs[@]}"; do
+    local dest="${TARGET_DIR}/${dest_dir}"
+    mkdir -p "$dest"
     
-    if [[ -f "$skill_file" ]]; then
-      skip "已存在: .claude/skills/${skill}/SKILL.md"
-      SKIPPED_FILES=$((SKIPPED_FILES + 1))
+    for skill in "${skills[@]}"; do
+      local skill_dir="${dest}/${skill}"
+      local skill_file="${skill_dir}/SKILL.md"
       
-      # 仍需检查子目录是否缺失
-      for subdir in references scripts; do
-        if [[ -d "${SCRIPT_DIR}/../.claude/skills/${skill}/${subdir}" ]] && [[ ! -d "${skill_dir}/${subdir}" ]]; then
-          if [[ "$DRY_RUN" == "true" ]]; then
-            log "[dry-run] 将补充: .claude/skills/${skill}/${subdir}/"
-          else
-            cp -r "${SCRIPT_DIR}/../.claude/skills/${skill}/${subdir}" "${skill_dir}/${subdir}"
-            ok "已补充: .claude/skills/${skill}/${subdir}/"
-          fi
-        fi
-      done
-      continue
-    fi
-    
-    mkdir -p "$skill_dir"
-    
-    if [[ "$DRY_RUN" == "true" ]]; then
-      log "[dry-run] 将创建: .claude/skills/${skill}/SKILL.md"
-    else
-      if [[ -f "${SCRIPT_DIR}/../.claude/skills/${skill}/SKILL.md" ]]; then
-        cp "${SCRIPT_DIR}/../.claude/skills/${skill}/SKILL.md" "$skill_file"
-      else
-        download_file ".claude/skills/${skill}/SKILL.md" "$skill_file"
+      if [[ -f "$skill_file" ]]; then
+        skip "已存在: ${dest_dir}/${skill}/SKILL.md"
+        SKIPPED_FILES=$((SKIPPED_FILES + 1))
+        continue
       fi
       
-      for subdir in references scripts; do
-        if [[ -d "${SCRIPT_DIR}/../.claude/skills/${skill}/${subdir}" ]]; then
-          cp -r "${SCRIPT_DIR}/../.claude/skills/${skill}/${subdir}" "${skill_dir}/${subdir}"
-        fi
-      done
+      mkdir -p "$skill_dir"
       
-      ok "已安装 skill: ${skill}"
-    fi
+      if [[ "$DRY_RUN" == "true" ]]; then
+        log "[dry-run] 将创建: ${dest_dir}/${skill}/SKILL.md"
+      else
+        if [[ -f "${SCRIPT_DIR}/../.claude/skills/${skill}/SKILL.md" ]]; then
+          cp "${SCRIPT_DIR}/../.claude/skills/${skill}/SKILL.md" "$skill_file"
+        else
+          download_file ".claude/skills/${skill}/SKILL.md" "$skill_file"
+        fi
+        
+        for subdir in references scripts; do
+          if [[ -d "${SCRIPT_DIR}/../.claude/skills/${skill}/${subdir}" ]]; then
+            cp -r "${SCRIPT_DIR}/../.claude/skills/${skill}/${subdir}" "${skill_dir}/${subdir}"
+          fi
+        done
+        
+        ok "已安装: ${dest_dir}/${skill}/"
+      fi
+    done
   done
 }
 
@@ -525,49 +527,6 @@ install_docs_structure() {
 }
 
 # ============================================================================
-# 多工具适配：通过符号链接同步 .claude/skills/ 到其他路径
-# ============================================================================
-sync_codex_docs() {
-  local source="${TARGET_DIR}/.claude/skills"
-  
-  # .opencode/skills → .claude/skills（OpenCode 原生最高优先级）
-  local opencode_link="${TARGET_DIR}/.opencode/skills"
-  if [[ "$DRY_RUN" == "true" ]]; then
-    log "[dry-run] 创建符号链接: .opencode/skills → .claude/skills"
-  elif [[ -L "$opencode_link" ]]; then
-    skip "已存在: .opencode/skills (symlink)"
-  elif [[ -d "$opencode_link" ]]; then
-    warn ".opencode/skills 是目录，替换为符号链接"
-    rm -rf "$opencode_link"
-    mkdir -p "${TARGET_DIR}/.opencode"
-    ln -s "../.claude/skills" "$opencode_link"
-    ok "已创建: .opencode/skills → .claude/skills"
-  else
-    mkdir -p "${TARGET_DIR}/.opencode"
-    ln -s "../.claude/skills" "$opencode_link"
-    ok "已创建: .opencode/skills → .claude/skills"
-  fi
-  
-  # .agents/skills → .claude/skills（Codex 原生）
-  local codex_link="${TARGET_DIR}/.agents/skills"
-  if [[ "$DRY_RUN" == "true" ]]; then
-    log "[dry-run] 创建符号链接: .agents/skills → .claude/skills"
-  elif [[ -L "$codex_link" ]]; then
-    skip "已存在: .agents/skills (symlink)"
-  elif [[ -d "$codex_link" ]]; then
-    warn ".agents/skills 是目录，替换为符号链接"
-    rm -rf "$codex_link"
-    mkdir -p "${TARGET_DIR}/.agents"
-    ln -s "../.claude/skills" "$codex_link"
-    ok "已创建: .agents/skills → .claude/skills"
-  else
-    mkdir -p "${TARGET_DIR}/.agents"
-    ln -s "../.claude/skills" "$codex_link"
-    ok "已创建: .agents/skills → .claude/skills"
-  fi
-}
-
-# ============================================================================
 # 远程下载
 # ============================================================================
 download_file() {
@@ -602,13 +561,14 @@ main() {
   
   echo ""
   log "安装计划:"
-  if [[ $EXISTING_AGENTS -gt 0 ]] || [[ $EXISTING_SKILLS -gt 0 ]]; then
-    echo "  ┌─ Agents: ${EXISTING_AGENTS} 已存在, ${NEW_AGENTS} 将新增"
-    echo "  ├─ Skills: ${EXISTING_SKILLS} 已存在, ${NEW_SKILLS} 将新增"
-  else
-    echo "  ┌─ Agents (7) — 全新安装"
-    echo "  ├─ Skills (11) — 全新安装"
-  fi
+  echo "  ┌─ 目标工具: ${TOOL}"
+  
+  case "$TOOL" in
+    claude)   echo "  ├─ Skills → .claude/skills/" ;;
+    codex)    echo "  ├─ Skills → .agents/skills/" ;;
+    opencode) echo "  ├─ Skills → .opencode/skills/" ;;
+    all)      echo "  ├─ Skills → .claude/skills/ + .agents/skills/ + .opencode/skills/" ;;
+  esac
   
   if [[ -f "${TARGET_DIR}/AGENTS.md" ]]; then
     echo "  ├─ AGENTS.md — 增量注入 harness 区域"
@@ -622,7 +582,10 @@ main() {
     echo "  ├─ CLAUDE.md — 新建"
   fi
   
-  echo "  └─ .opencode/skills + .agents/skills → symlink 到 .claude/skills"
+  echo "  ├─ Agents → .claude/agents/"
+  echo "  ├─ AGENTS.md — 增量注入"
+  echo "  ├─ CLAUDE.md — 增量注入"
+  echo "  └─ docs/ — 仅补充缺失"
   echo ""
   
   if [[ "$DRY_RUN" == "true" ]]; then
@@ -648,7 +611,6 @@ main() {
   install_claude_md
   install_agents_md
   install_docs_structure
-  sync_codex_docs
   
   echo ""
   echo "╔══════════════════════════════════════════════════╗"

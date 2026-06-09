@@ -27,15 +27,29 @@
 ## 30 秒安装
 
 ```bash
-git clone https://github.com/zhengguangli/harness-pilot.git /tmp/hp && /tmp/hp/scripts/install.sh -y && rm -rf /tmp/hp
+git clone https://github.com/zhengguangli/harness-pilot.git /tmp/hp
+/tmp/hp/scripts/install.sh --yes
+rm -rf /tmp/hp
 ```
 
 已有 `AGENTS.md` / `CLAUDE.md`？**不会覆盖。** harness-pilot 通过 marker 增量注入，保留你的所有原始内容。
 
 ```bash
+# 指定 AI 工具（默认 claude）
+/tmp/hp/scripts/install.sh --tool codex --yes     # Codex
+/tmp/hp/scripts/install.sh --tool opencode --yes  # OpenCode
+/tmp/hp/scripts/install.sh --tool all --yes       # 全部安装
+
 # 预览安装内容
 /tmp/hp/scripts/install.sh --dry-run
 ```
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `--dir <path>` | 目标项目目录 | 当前目录 |
+| `--tool <name>` | 目标 AI 工具：`claude` / `codex` / `opencode` / `all` | `claude` |
+| `--dry-run` | 仅预览不写入 | 否 |
+| `--yes, -y` | 跳过确认提示 | 否 |
 
 ---
 
