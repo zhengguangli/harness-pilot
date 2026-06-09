@@ -525,54 +525,46 @@ install_docs_structure() {
 }
 
 # ============================================================================
-# 多工具适配：同步 skill 定义到 .opencode/skills/ 和 .agents/skills/
+# 多工具适配：通过符号链接同步 .claude/skills/ 到其他路径
 # ============================================================================
 sync_codex_docs() {
-  local skills=(harness-orchestrator harness-init context-setup architecture-guard entropy-gc observability-setup sandbox-exec quality-gate agent-readability harness-evolve hooks-framework)
+  local source="${TARGET_DIR}/.claude/skills"
   
-  # 同步到 .opencode/skills/（OpenCode 原生，最高优先级）
-  local opencode_dest="${TARGET_DIR}/.opencode/skills"
-  mkdir -p "$opencode_dest"
-  for skill in "${skills[@]}"; do
-    local src="${TARGET_DIR}/.claude/skills/${skill}/SKILL.md"
-    local dst="${opencode_dest}/${skill}/SKILL.md"
-    if [[ -f "$src" ]]; then
-      mkdir -p "${opencode_dest}/${skill}"
-      if [[ "$DRY_RUN" == "true" ]]; then
-        log "[dry-run] OpenCode 同步: .opencode/skills/${skill}/SKILL.md"
-      elif [[ ! -f "$dst" ]] || [[ "$src" -nt "$dst" ]]; then
-        cp "$src" "$dst"
-        for subdir in references scripts; do
-          if [[ -d "${TARGET_DIR}/.claude/skills/${skill}/${subdir}" ]]; then
-            cp -r "${TARGET_DIR}/.claude/skills/${skill}/${subdir}" "${opencode_dest}/${skill}/${subdir}"
-          fi
-        done
-        ok "OpenCode 同步: .opencode/skills/${skill}/"
-      fi
-    fi
-  done
+  # .opencode/skills → .claude/skills（OpenCode 原生最高优先级）
+  local opencode_link="${TARGET_DIR}/.opencode/skills"
+  if [[ "$DRY_RUN" == "true" ]]; then
+    log "[dry-run] 创建符号链接: .opencode/skills → .claude/skills"
+  elif [[ -L "$opencode_link" ]]; then
+    skip "已存在: .opencode/skills (symlink)"
+  elif [[ -d "$opencode_link" ]]; then
+    warn ".opencode/skills 是目录，替换为符号链接"
+    rm -rf "$opencode_link"
+    mkdir -p "${TARGET_DIR}/.opencode"
+    ln -s "../.claude/skills" "$opencode_link"
+    ok "已创建: .opencode/skills → .claude/skills"
+  else
+    mkdir -p "${TARGET_DIR}/.opencode"
+    ln -s "../.claude/skills" "$opencode_link"
+    ok "已创建: .opencode/skills → .claude/skills"
+  fi
   
-  # 同步到 .agents/skills/（Codex 原生）
-  local codex_dest="${TARGET_DIR}/.agents/skills"
-  mkdir -p "$codex_dest"
-  for skill in "${skills[@]}"; do
-    local src="${TARGET_DIR}/.claude/skills/${skill}/SKILL.md"
-    local dst="${codex_dest}/${skill}/SKILL.md"
-    if [[ -f "$src" ]]; then
-      mkdir -p "${codex_dest}/${skill}"
-      if [[ "$DRY_RUN" == "true" ]]; then
-        log "[dry-run] Codex 同步: .agents/skills/${skill}/SKILL.md"
-      elif [[ ! -f "$dst" ]] || [[ "$src" -nt "$dst" ]]; then
-        cp "$src" "$dst"
-        for subdir in references scripts; do
-          if [[ -d "${TARGET_DIR}/.claude/skills/${skill}/${subdir}" ]]; then
-            cp -r "${TARGET_DIR}/.claude/skills/${skill}/${subdir}" "${codex_dest}/${skill}/${subdir}"
-          fi
-        done
-        ok "Codex 同步: .agents/skills/${skill}/"
-      fi
-    fi
-  done
+  # .agents/skills → .claude/skills（Codex 原生）
+  local codex_link="${TARGET_DIR}/.agents/skills"
+  if [[ "$DRY_RUN" == "true" ]]; then
+    log "[dry-run] 创建符号链接: .agents/skills → .claude/skills"
+  elif [[ -L "$codex_link" ]]; then
+    skip "已存在: .agents/skills (symlink)"
+  elif [[ -d "$codex_link" ]]; then
+    warn ".agents/skills 是目录，替换为符号链接"
+    rm -rf "$codex_link"
+    mkdir -p "${TARGET_DIR}/.agents"
+    ln -s "../.claude/skills" "$codex_link"
+    ok "已创建: .agents/skills → .claude/skills"
+  else
+    mkdir -p "${TARGET_DIR}/.agents"
+    ln -s "../.claude/skills" "$codex_link"
+    ok "已创建: .agents/skills → .claude/skills"
+  fi
 }
 
 # ============================================================================
@@ -630,7 +622,7 @@ main() {
     echo "  ├─ CLAUDE.md — 新建"
   fi
   
-  echo "  └─ docs/ + .opencode/skills/ + .agents/skills/ — 三轨同步"
+  echo "  └─ .opencode/skills + .agents/skills → symlink 到 .claude/skills"
   echo ""
   
   if [[ "$DRY_RUN" == "true" ]]; then
