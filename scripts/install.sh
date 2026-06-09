@@ -444,27 +444,32 @@ install_skills() {
       if [[ -f "$skill_file" ]]; then
         skip "已存在: ${dest_dir}/${skill}/SKILL.md"
         SKIPPED_FILES=$((SKIPPED_FILES + 1))
-        continue
+      else
+        mkdir -p "$skill_dir"
+        
+        if [[ "$DRY_RUN" == "true" ]]; then
+          log "[dry-run] 将创建: ${dest_dir}/${skill}/SKILL.md"
+        else
+          if [[ -f "${SCRIPT_DIR}/../.claude/skills/${skill}/SKILL.md" ]]; then
+            cp "${SCRIPT_DIR}/../.claude/skills/${skill}/SKILL.md" "$skill_file"
+          else
+            download_file ".claude/skills/${skill}/SKILL.md" "$skill_file"
+          fi
+          ok "已安装: ${dest_dir}/${skill}/SKILL.md"
+        fi
       fi
       
-      mkdir -p "$skill_dir"
-      
-      if [[ "$DRY_RUN" == "true" ]]; then
-        log "[dry-run] 将创建: ${dest_dir}/${skill}/SKILL.md"
-      else
-        if [[ -f "${SCRIPT_DIR}/../.claude/skills/${skill}/SKILL.md" ]]; then
-          cp "${SCRIPT_DIR}/../.claude/skills/${skill}/SKILL.md" "$skill_file"
-        else
-          download_file ".claude/skills/${skill}/SKILL.md" "$skill_file"
-        fi
-        
+      # 始终复制子目录（scripts/references），即使 SKILL.md 已存在
+      if [[ "$DRY_RUN" != "true" ]]; then
         for subdir in references scripts; do
-          if [[ -d "${SCRIPT_DIR}/../.claude/skills/${skill}/${subdir}" ]]; then
-            cp -r "${SCRIPT_DIR}/../.claude/skills/${skill}/${subdir}" "${skill_dir}/${subdir}"
+          local src="${SCRIPT_DIR}/../.claude/skills/${skill}/${subdir}"
+          local dst="${skill_dir}/${subdir}"
+          if [[ -d "$src" ]] && [[ ! -d "$dst" ]]; then
+            mkdir -p "$skill_dir"
+            cp -r "$src" "$dst"
+            ok "已补充: ${dest_dir}/${skill}/${subdir}/"
           fi
         done
-        
-        ok "已安装: ${dest_dir}/${skill}/"
       fi
     done
   done
