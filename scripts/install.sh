@@ -527,6 +527,330 @@ install_docs_structure() {
 }
 
 # ============================================================================
+# CI 模板生成（GitHub Actions）
+# ============================================================================
+install_ci_templates() {
+  local dest="${TARGET_DIR}/.github/workflows"
+  
+  # hooks.yml — push/PR 时运行 harness hooks
+  local hooks_file="${dest}/harness-hooks.yml"
+  if [[ -f "$hooks_file" ]]; then
+    skip "已存在: .github/workflows/harness-hooks.yml"
+  elif [[ "$DRY_RUN" == "true" ]]; then
+    log "[dry-run] 将创建: .github/workflows/harness-hooks.yml"
+  else
+    mkdir -p "$dest"
+    cat > "$hooks_file" <<'YAML'
+name: Harness Hooks
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  hooks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pre-execution hooks
+        run: |
+          if [[ -f .claude/skills/hooks-framework/scripts/run-hooks.sh ]]; then
+            .claude/skills/hooks-framework/scripts/run-hooks.sh pre --verbose
+          fi
+
+      - name: Post-execution hooks
+        run: |
+          if [[ -f .claude/skills/hooks-framework/scripts/run-hooks.sh ]]; then
+            .claude/skills/hooks-framework/scripts/run-hooks.sh post --verbose
+          fi
+
+      - name: Observation hooks
+        if: always()
+        run: |
+          if [[ -f .claude/skills/hooks-framework/scripts/run-hooks.sh ]]; then
+            .claude/skills/hooks-framework/scripts/run-hooks.sh observe --verbose
+          fi
+
+      - name: Upload trace logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: harness-trace
+          path: .workspace/
+          retention-days: 7
+YAML
+    ok "已创建: .github/workflows/harness-hooks.yml"
+  fi
+  
+  # doc-gardening.yml — 每周检查文档新鲜度
+  local gardening_file="${dest}/doc-gardening.yml"
+  if [[ -f "$gardening_file" ]]; then
+    skip "已存在: .github/workflows/doc-gardening.yml"
+  elif [[ "$DRY_RUN" == "true" ]]; then
+    log "[dry-run] 将创建: .github/workflows/doc-gardening.yml"
+  else
+    mkdir -p "$dest"
+    cat > "$gardening_file" <<'YAML'
+name: Doc Gardening
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # 每周一 09:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  garden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check AGENTS.md freshness
+        run: |
+          if [[ -f .claude/skills/hooks-framework/scripts/context-check.sh ]]; then
+            .claude/skills/hooks-framework/scripts/context-check.sh || true
+          fi
+
+      - name: Check for stale docs
+        run: |
+          echo "## 文档新鲜度报告" > /tmp/doc-report.md
+          echo "" >> /tmp/doc-report.md
+          stale=0
+          for doc in docs/*.md; do
+            if [[ -f "$doc" ]]; then
+              age_days=$(( ($(date +%s) - $(stat -c %Y "$doc" 2>/dev/null || stat -f %m "$doc")) / 86400 ))
+              if [[ $age_days -gt 30 ]]; then
+                echo "- ⚠️ \`${doc}\` — ${age_days} 天未更新" >> /tmp/doc-report.md
+                ((stale++))
+              fi
+            fi
+          done
+          if [[ $stale -eq 0 ]]; then
+            echo "- ✅ 所有文档新鲜（<30 天）" >> /tmp/doc-report.md
+          fi
+          cat /tmp/doc-report.md
+
+      - name: Quality metrics
+        run: |
+          if [[ -f .claude/skills/hooks-framework/scripts/quality-metric.mjs ]]; then
+            node .claude/skills/hooks-framework/scripts/quality-metric.mjs || true
+          fi
+          if [[ -f .workspace/metrics/quality_$(date +%Y%m%d).json ]]; then
+            echo "### 质量指标" >> /tmp/doc-report.md
+            echo '```json' >> /tmp/doc-report.md
+            cat .workspace/metrics/quality_$(date +%Y%m%d).json >> /tmp/doc-report.md
+            echo '```' >> /tmp/doc-report.md
+          fi
+YAML
+    ok "已创建: .github/workflows/doc-gardening.yml"
+  fi
+}
+
+# ============================================================================
+# Hooks 配置生成（三工具统一）
+# ============================================================================
+install_hooks_config() {
+  local hooks_dir="${TARGET_DIR}/.claude/skills/hooks-framework/scripts"
+  local project_dir='${CLAUDE_PROJECT_DIR}'
+  
+  case "$TOOL" in
+    claude)   install_claude_hooks ;;
+    codex)    install_codex_hooks ;;
+    opencode) install_opencode_hooks ;;
+    all)
+      install_claude_hooks
+      install_codex_hooks
+      install_opencode_hooks
+      ;;
+  esac
+}
+
+install_claude_hooks() {
+  local settings_file="${TARGET_DIR}/.claude/settings.json"
+  local hooks_json
+  hooks_json=$(cat <<'JSON'
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {"type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/skills/hooks-framework/scripts/context-check.mjs"]},
+          {"type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/skills/hooks-framework/scripts/env-verify.mjs"]}
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {"type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/skills/hooks-framework/scripts/lint-check.mjs"]}
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {"type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/skills/hooks-framework/scripts/compaction.mjs"]}
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {"type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/skills/hooks-framework/scripts/trace-log.mjs"]},
+          {"type": "command", "command": "node", "args": ["${CLAUDE_PROJECT_DIR}/.claude/skills/hooks-framework/scripts/quality-metric.mjs"]}
+        ]
+      }
+    ]
+  }
+}
+JSON
+)
+  
+  if [[ -f "$settings_file" ]]; then
+    if grep -q '"hooks"' "$settings_file" 2>/dev/null; then
+      skip "已存在: .claude/settings.json (含 hooks)"
+      return
+    fi
+    if [[ "$DRY_RUN" == "true" ]]; then
+      log "[dry-run] 将合并 hooks 到: .claude/settings.json"
+    else
+      # 合并 hooks 到已有 settings.json
+      local tmp="${settings_file}.tmp"
+      python3 -c "
+import json, sys
+with open('$settings_file') as f: settings = json.load(f)
+hooks = $hooks_json
+settings['hooks'] = hooks['hooks']
+with open('$tmp', 'w') as f: json.dump(settings, f, indent=2)
+" 2>/dev/null || {
+        # python3 不可用时直接追加
+        cp "$settings_file" "$tmp"
+      }
+      mv "$tmp" "$settings_file"
+      ok "已合并 hooks 到: .claude/settings.json"
+    fi
+  else
+    if [[ "$DRY_RUN" == "true" ]]; then
+      log "[dry-run] 将创建: .claude/settings.json (含 hooks)"
+    else
+      mkdir -p "${TARGET_DIR}/.claude"
+      echo "$hooks_json" > "$settings_file"
+      ok "已创建: .claude/settings.json (含 hooks)"
+    fi
+  fi
+}
+
+install_codex_hooks() {
+  local hooks_file="${TARGET_DIR}/.codex/hooks.json"
+  
+  if [[ -f "$hooks_file" ]]; then
+    if grep -q '"hooks"' "$hooks_file" 2>/dev/null; then
+      skip "已存在: .codex/hooks.json"
+      return
+    fi
+  fi
+  
+  if [[ "$DRY_RUN" == "true" ]]; then
+    log "[dry-run] 将创建: .codex/hooks.json"
+  else
+    mkdir -p "${TARGET_DIR}/.codex"
+    cat > "$hooks_file" <<'JSON'
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {"type": "command", "command": "node", "args": ["$(git rev-parse --show-toplevel)/.claude/skills/hooks-framework/scripts/context-check.mjs"]},
+          {"type": "command", "command": "node", "args": ["$(git rev-parse --show-toplevel)/.claude/skills/hooks-framework/scripts/env-verify.mjs"]}
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {"type": "command", "command": "node", "args": ["$(git rev-parse --show-toplevel)/.claude/skills/hooks-framework/scripts/lint-check.mjs"]}
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {"type": "command", "command": "node", "args": ["$(git rev-parse --show-toplevel)/.claude/skills/hooks-framework/scripts/compaction.mjs"]}
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {"type": "command", "command": "node", "args": ["$(git rev-parse --show-toplevel)/.claude/skills/hooks-framework/scripts/trace-log.mjs"]},
+          {"type": "command", "command": "node", "args": ["$(git rev-parse --show-toplevel)/.claude/skills/hooks-framework/scripts/quality-metric.mjs"]}
+        ]
+      }
+    ]
+  }
+}
+JSON
+    ok "已创建: .codex/hooks.json"
+  fi
+}
+
+install_opencode_hooks() {
+  local plugin_file="${TARGET_DIR}/.opencode/plugins/harness-hooks.ts"
+  
+  if [[ -f "$plugin_file" ]]; then
+    skip "已存在: .opencode/plugins/harness-hooks.ts"
+    return
+  fi
+  
+  if [[ "$DRY_RUN" == "true" ]]; then
+    log "[dry-run] 将创建: .opencode/plugins/harness-hooks.ts"
+  else
+    mkdir -p "${TARGET_DIR}/.opencode/plugins"
+    cat > "$plugin_file" <<'TYPESCRIPT'
+import type { Plugin } from "@opencode-ai/plugin"
+
+export const HarnessHooks: Plugin = async ({ $, directory }) => {
+  const scripts = `${directory}/.claude/skills/hooks-framework/scripts`
+
+  return {
+    "session.created": async () => {
+      try { await $`node ${scripts}/context-check.mjs`.quiet() } catch {}
+      try { await $`node ${scripts}/env-verify.mjs`.quiet() } catch {}
+    },
+
+    "file.edited": async () => {
+      try { await $`node ${scripts}/lint-check.mjs`.quiet() } catch {}
+    },
+
+    "experimental.session.compacting": async (_input, output) => {
+      try {
+        const result = await $`node ${scripts}/compaction.mjs`.text()
+        if (result) output.context.push(result)
+      } catch {}
+    },
+
+    "session.idle": async () => {
+      try { await $`node ${scripts}/trace-log.mjs`.quiet() } catch {}
+      try { await $`node ${scripts}/quality-metric.mjs`.quiet() } catch {}
+    },
+  }
+}
+TYPESCRIPT
+    ok "已创建: .opencode/plugins/harness-hooks.ts"
+  fi
+}
+
+# ============================================================================
 # 远程下载
 # ============================================================================
 download_file() {
@@ -585,7 +909,8 @@ main() {
   echo "  ├─ Agents → .claude/agents/"
   echo "  ├─ AGENTS.md — 增量注入"
   echo "  ├─ CLAUDE.md — 增量注入"
-  echo "  └─ docs/ — 仅补充缺失"
+  echo "  ├─ docs/ — 仅补充缺失"
+  echo "  └─ CI → .github/workflows/（hooks + doc-gardening）"
   echo ""
   
   if [[ "$DRY_RUN" == "true" ]]; then
@@ -611,6 +936,8 @@ main() {
   install_claude_md
   install_agents_md
   install_docs_structure
+  install_ci_templates
+  install_hooks_config
   
   echo ""
   echo "╔══════════════════════════════════════════════════╗"

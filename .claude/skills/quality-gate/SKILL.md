@@ -38,6 +38,30 @@ description: 质量审查门禁。执行代码审查、架构合规检查、品�
 | 大小 | 文件/函数是否过长 |
 | 重复 | 是否有可提取为共享工具的重复代码 |
 
+### Step 3.5: 语言适配检查强度
+
+根据项目技术栈调整检查强度。**Parse, Don't Validate** 在不同语言中的实现方式不同：
+
+| 语言 | 类型安全 | Parse, Don't Validate 实现 | 检查重点 |
+|------|----------|---------------------------|----------|
+| TypeScript | 强 | Zod/Valibot 运行时验证 + 类型推断 | 避免 `any`、类型断言、`as` 强转 |
+| Rust | 强 | 编译期检查 + Result 错误处理 | 避免 `unwrap()`、`panic!`、`unsafe` |
+| Go | 中 | 显式错误处理 + 接口约束 | 避免 `interface{}`、忽略 error |
+| Python | 弱 | Pydantic/dataclasses + 类型注解 | 使用 type hints、避免 dict 直传 |
+| JavaScript | 弱 | 运行时验证库 + JSDoc | 使用 TypeScript 或 Zod |
+
+**动态语言加强检查：**
+
+```
+Python/JS/Ruby 项目 → 提高以下检查权重：
+- 运行时验证（Pydantic/Zod/Joi）
+- 类型注解覆盖率
+- 边界处的数据解析
+- 隐式类型转换
+
+静态语言（TS/Rust/Go）→ 标准检查即可
+```
+
 ### Step 4: 安全审查
 
 | 检查项 | 严重程度 |

@@ -54,7 +54,34 @@ description: 为项目初始化完整的 Harness Engineering 体系。一键生�
 | harness-evolve | 反馈驱动演进 | ✅ |
 | hooks-framework | 确定性执行钩子 | ✅ |
 
-### Phase 5: 质量审查
+### Phase 5: Hooks 配置
+
+基于 `.claude/skills/hooks-framework/hooks.yaml` 模板，生成项目定制的 hooks 配置：
+
+1. 复制 `hooks.yaml` 到项目根目录
+2. 根据项目技术栈调整 `lint-check.sh` 中的检查规则
+3. 根据项目测试框架调整 `test-run.sh` 中的测试命令
+4. 配置 CI 集成（`.github/workflows/harness-hooks.yml`）
+
+**hooks.yaml 核心配置：**
+
+```yaml
+hooks:
+  pre_execution:
+    - name: context-check    # 检查 AGENTS.md 新鲜度
+    - name: env-verify       # 验证环境就绪
+  post_execution:
+    - name: lint-check       # 架构边界检查
+    - name: test-run         # 运行测试
+  interception:
+    - name: continuation     # Ralph Loop 续行
+    - name: compaction       # 上下文压缩
+  observation:
+    - name: trace-log        # 执行日志
+    - name: quality-metric   # 质量指标
+```
+
+### Phase 6: 质量审查
 
 调用 `reviewer` agent：
 
@@ -63,7 +90,7 @@ description: 为项目初始化完整的 Harness Engineering 体系。一键生�
 3. 检查 CLAUDE.md 指针正确性
 4. 检查知识库交叉引用
 
-### Phase 6: 验证
+### Phase 7: 验证
 
 调用 `qa` agent：
 
@@ -95,6 +122,9 @@ description: 为项目初始化完整的 Harness Engineering 体系。一键生�
 - [ ] `CLAUDE.md` — harness 指针
 - [ ] `docs/` — 知识库目录结构及骨架文档
 - [ ] `docs/ARCHITECTURE.md` — 架构地图
+- [ ] `hooks.yaml` — 项目定制的执行钩子配置
+- [ ] `.github/workflows/harness-hooks.yml` — CI hooks 集成
+- [ ] `.github/workflows/doc-gardening.yml` — 文档新鲜度检查
 
 ## 参考资料
 
