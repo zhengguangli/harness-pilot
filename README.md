@@ -121,38 +121,42 @@ harness   harness  context   arch    quality  sandbox  observ   entropy  harness
 
 ---
 
-<details>
-<summary><b>📦 安装后文件结构</b></summary>
+## 文件结构
 
 ```
 your-project/
-├── CLAUDE.md                  ← Harness 指针
+├── CLAUDE.md                  ← Harness 指针 + 变更历史
 ├── AGENTS.md                  ← 知识目录（≤100行）
 ├── .claude/
-│   ├── agents/                ← 7 个 agent
-│   └── skills/                ← 11 个技能
+│   ├── agents/                ← 7 个 agent 定义
+│   └── skills/                ← 11 个技能定义
 └── docs/                      ← 知识库
-    ├── ARCHITECTURE.md
-    ├── DESIGN.md
-    ├── QUALITY_SCORE.md
+    ├── ARCHITECTURE.md        ← 分层架构地图
+    ├── DESIGN.md              ← 设计系统
+    ├── QUALITY_SCORE.md       ← 质量评分（追踪差距）
+    ├── SECURITY.md            ← 安全要求
     └── ...
 ```
 
-</details>
+---
 
-<details>
-<summary><b>📐 设计来源</b></summary>
+## 设计来源
 
-| 实践 | 出处 |
-|------|------|
-| 仓库即记录系统 · 给地图不给说明书 | [OpenAI: Harness Engineering](https://openai.com/zh-Hans-CN/index/harness-engineering) |
-| 约束即加速器 · 品味不变量 | [OpenAI: Harness Engineering](https://openai.com/zh-Hans-CN/index/harness-engineering) |
-| Agent = Model + Harness | [LangChain: Agent Anatomy](https://www.langchain.com/blog/the-anatomy-of-an-agent-harness) |
-| 渐进式披露 · 抗上下文腐烂 | 两者共同 |
-| Ralph 续行 · 自验证回路 | 两者共同 |
+这套技能包不是凭空造的。每条原则都有出处，每个机制都经过实战验证。
 
-</details>
+- **OpenAI: Harness Engineering** — 用 Codex 从零构建百万行代码产品的经验总结。仓库即记录系统、约束即加速器、品味不变量。
+- **LangChain: Agent Anatomy** — Agent = Model + Harness 的定义框架。文件系统作为协作表面、Ralph 续行循环、上下文腐烂防护。
+
+> 模型在进化，Harness 也在进化。这不是一次性产物，是一个持续演进的系统。
 
 ---
 
-MIT · 自由使用、修改、分发 · [LICENSE](LICENSE)
+## 开源协议
+
+**MIT License** — 你可以做任何事。
+
+用它、改它、 fork 它、拿去卖钱、集成到你的产品里，不需要问任何人。唯一的要求：保留版权声明。
+
+如果你觉得有价值，给个 star。如果发现问题，开个 issue。如果改了什么好东西，提个 PR。
+
+[![Star History Chart](https://api.star-history.com/svg?repos=zhengguangli/harness-pilot&type=Date)](https://star-history.com/#zhengguangli/harness-pilot&Date)
