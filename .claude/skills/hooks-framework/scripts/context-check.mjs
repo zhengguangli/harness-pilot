@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync } from 'fs'
+import { existsSync, readFileSync, statSync, appendFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
 
 export function contextCheck(projectDir) {
@@ -39,6 +39,12 @@ export function contextCheck(projectDir) {
 
 if (process.argv[1]?.endsWith('context-check.mjs')) {
   const dir = process.env.CLAUDE_PROJECT_DIR || process.env.PROJECT_DIR || process.cwd()
+  // 调试标记
+  try {
+    const ws = join(dir, '.workspace')
+    mkdirSync(ws, { recursive: true })
+    appendFileSync(join(ws, 'hook_debug.log'), `${new Date().toISOString()} SessionStart hook (context-check) fired\n`)
+  } catch {}
   const r = contextCheck(dir)
   if (r.message) {
     if (r.exitCode !== 0) console.error(r.message)

@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync, mkdirSync } from 'fs'
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync, mkdirSync, appendFileSync } from 'fs'
 import { join } from 'path'
 
 export function compaction(projectDir) {
@@ -58,6 +58,12 @@ ${currentTask}
 
 if (process.argv[1]?.endsWith('compaction.mjs')) {
   const dir = process.env.CLAUDE_PROJECT_DIR || process.env.PROJECT_DIR || process.cwd()
+  // 调试标记 — 每次执行都写入，用于验证 hook 是否真的触发
+  try {
+    const ws = join(dir, '.workspace')
+    mkdirSync(ws, { recursive: true })
+    appendFileSync(join(ws, 'hook_debug.log'), `${new Date().toISOString()} PreCompact hook fired\n`)
+  } catch {}
   const r = compaction(dir)
   if (r.message) console.error(r.message)
   process.exit(0)
