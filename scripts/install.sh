@@ -525,6 +525,35 @@ install_docs_structure() {
 }
 
 # ============================================================================
+# Codex 适配：同步 skill 定义到 .agents/skills/
+# ============================================================================
+sync_codex_docs() {
+  local dest="${TARGET_DIR}/.agents/skills"
+  mkdir -p "$dest"
+  
+  local skills=(harness-orchestrator harness-init context-setup architecture-guard entropy-gc observability-setup sandbox-exec quality-gate agent-readability harness-evolve hooks-framework)
+  for skill in "${skills[@]}"; do
+    local src="${TARGET_DIR}/.claude/skills/${skill}/SKILL.md"
+    local dst="${dest}/${skill}/SKILL.md"
+    if [[ -f "$src" ]]; then
+      mkdir -p "${dest}/${skill}"
+      if [[ "$DRY_RUN" == "true" ]]; then
+        log "[dry-run] Codex 同步: .agents/skills/${skill}/SKILL.md"
+      elif [[ ! -f "$dst" ]] || [[ "$src" -nt "$dst" ]]; then
+        cp "$src" "$dst"
+        # 同步子目录
+        for subdir in references scripts; do
+          if [[ -d "${TARGET_DIR}/.claude/skills/${skill}/${subdir}" ]]; then
+            cp -r "${TARGET_DIR}/.claude/skills/${skill}/${subdir}" "${dest}/${skill}/${subdir}"
+          fi
+        done
+        ok "Codex 同步: .agents/skills/${skill}/"
+      fi
+    fi
+  done
+}
+
+# ============================================================================
 # 远程下载
 # ============================================================================
 download_file() {
@@ -579,7 +608,7 @@ main() {
     echo "  ├─ CLAUDE.md — 新建"
   fi
   
-  echo "  └─ docs/ — 仅补充缺失"
+  echo "  └─ docs/ + .agents/skills/ — 补充缺失 + Codex 同步"
   echo ""
   
   if [[ "$DRY_RUN" == "true" ]]; then
@@ -605,6 +634,7 @@ main() {
   install_claude_md
   install_agents_md
   install_docs_structure
+  sync_codex_docs
   
   echo ""
   echo "╔══════════════════════════════════════════════════╗"

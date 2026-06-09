@@ -60,3 +60,31 @@ rm -rf /tmp/harness-pilot
 - 演进反馈？读 `.claude/skills/harness-evolve/SKILL.md`
 - Hooks 配置？读 `.claude/skills/hooks-framework/SKILL.md`
 - 安装部署？读 `README.md` 或运行 `scripts/install.sh --help`
+
+<!-- CODEX:BEGIN -->
+## Codex 适配
+
+Codex 读取 `.agents/skills/`（非 `.claude/skills/`）。以下是等效路径：
+
+### Skill 定义（.agents/skills/）
+- harness-orchestrator: [.agents/skills/harness-orchestrator/SKILL.md](.agents/skills/harness-orchestrator/SKILL.md)
+- harness-init: [.agents/skills/harness-init/SKILL.md](.agents/skills/harness-init/SKILL.md)
+- context-setup: [.agents/skills/context-setup/SKILL.md](.agents/skills/context-setup/SKILL.md)
+- architecture-guard: [.agents/skills/architecture-guard/SKILL.md](.agents/skills/architecture-guard/SKILL.md)
+- entropy-gc: [.agents/skills/entropy-gc/SKILL.md](.agents/skills/entropy-gc/SKILL.md)
+- observability-setup: [.agents/skills/observability-setup/SKILL.md](.agents/skills/observability-setup/SKILL.md)
+- sandbox-exec: [.agents/skills/sandbox-exec/SKILL.md](.agents/skills/sandbox-exec/SKILL.md)
+- quality-gate: [.agents/skills/quality-gate/SKILL.md](.agents/skills/quality-gate/SKILL.md)
+- agent-readability: [.agents/skills/agent-readability/SKILL.md](.agents/skills/agent-readability/SKILL.md)
+- harness-evolve: [.agents/skills/harness-evolve/SKILL.md](.agents/skills/harness-evolve/SKILL.md)
+- hooks-framework: [.agents/skills/hooks-framework/SKILL.md](.agents/skills/hooks-framework/SKILL.md)
+
+### 核心原则
+1. **人类掌舵，智能体执行** — 工程师设计环境，AI 执行代码
+2. **仓库即记录系统** — 仓库外的知识对智能体不存在
+3. **给地图，不给说明书** — AGENTS.md 是目录，不是百科全书
+4. **约束即加速器** — 严格的架构边界是倍增器
+5. **渐进式披露** — 按需加载上下文，保护窗口
+6. **纠错成本低，等待成本高** — 快速合并+后续修复优于无限阻塞
+7. **Agent = Model + Harness** — 模型提供智能，Harness 让智能可用
+<!-- CODEX:END -->
