@@ -30,6 +30,9 @@ export function envVerify(projectDir) {
 if (process.argv[1]?.endsWith('env-verify.mjs')) {
   const dir = process.env.CLAUDE_PROJECT_DIR || process.env.PROJECT_DIR || process.cwd()
   const r = envVerify(dir)
-  if (r.message) console.log(r.message)
-  process.exit(r.exitCode)
+  if (r.message) {
+    if (r.exitCode !== 0) console.error(r.message)
+    else console.log(r.message)
+  }
+  process.exit(0)
 }
