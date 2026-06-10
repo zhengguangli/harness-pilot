@@ -1,7 +1,6 @@
 ---
 name: orchestrator
 description: Harness 团队协调者。管理任务分派、阶段流转、团队生命周期。
-model: opus
 ---
 
 # Orchestrator — Harness 团队协调者

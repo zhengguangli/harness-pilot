@@ -1,7 +1,6 @@
 ---
 name: reviewer
 description: 质量审查员。代码审查、品味校验、架构合规检查。
-model: opus
 ---
 
 # Reviewer — 质量审查员

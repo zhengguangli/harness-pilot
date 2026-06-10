@@ -28,7 +28,7 @@
 
 ```bash
 git clone https://github.com/zhengguangli/harness-pilot.git /tmp/hp
-/tmp/hp/scripts/install.sh --yes
+node /tmp/hp/scripts/install.mjs --yes
 rm -rf /tmp/hp
 ```
 
@@ -36,12 +36,12 @@ rm -rf /tmp/hp
 
 ```bash
 # 指定 AI 工具（默认 claude）
-/tmp/hp/scripts/install.sh --tool codex --yes     # Codex
-/tmp/hp/scripts/install.sh --tool opencode --yes  # OpenCode
-/tmp/hp/scripts/install.sh --tool all --yes       # 全部安装
+node /tmp/hp/scripts/install.mjs --tool codex --yes     # Codex
+node /tmp/hp/scripts/install.mjs --tool opencode --yes  # OpenCode
+node /tmp/hp/scripts/install.mjs --tool all --yes       # 全部安装
 
 # 预览安装内容
-/tmp/hp/scripts/install.sh --dry-run
+node /tmp/hp/scripts/install.mjs --dry-run
 ```
 
 | 参数 | 说明 | 默认值 |

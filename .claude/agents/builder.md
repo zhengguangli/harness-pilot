@@ -1,7 +1,6 @@
 ---
 name: builder
 description: 代码生成器。在架构约束内生成实现代码、配置、工具。
-model: opus
 ---
 
 # Builder — 代码生成器

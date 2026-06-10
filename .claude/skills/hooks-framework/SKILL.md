@@ -14,7 +14,7 @@ description: Hooks/中间件框架。定义确定性执行钩子，包括压缩�
 ```
 hooks.yaml（声明层：抽象事件名）
     ↓
-install.sh（适配层：转译为各工具原生格式）
+install.mjs（适配层：转译为各工具原生格式）
     ↓
 ├── .claude/settings.json    → Claude Code 原生 hooks
 ├── .codex/hooks.json        → Codex 原生 hooks
@@ -75,20 +75,20 @@ node .claude/skills/hooks-framework/scripts/context-check.mjs
 node .claude/skills/hooks-framework/scripts/lint-check.mjs
 ```
 
-### install.sh 自动生成
+### install.mjs 自动生成
 
 ```bash
 # Claude Code
-install.sh --tool claude   → 生成 .claude/settings.json hooks
+node scripts/install.mjs --tool claude   → 生成 .claude/settings.json hooks
 
 # Codex
-install.sh --tool codex    → 生成 .codex/hooks.json
+node scripts/install.mjs --tool codex    → 生成 .codex/hooks.json
 
 # OpenCode
-install.sh --tool opencode → 生成 .opencode/plugins/harness-hooks.ts
+node scripts/install.mjs --tool opencode → 生成 .opencode/plugins/harness-hooks.ts
 
 # 全部
-install.sh --tool all      → 三个都生成
+node scripts/install.mjs --tool all      → 三个都生成
 ```
 
 ## 输入/输出

@@ -98,7 +98,7 @@ hooks:
 2. 触发验证：每个 skill 的 should-trigger + should-NOT-trigger
 3. 干跑验证：orchestrator 阶段序列逻辑性
 
-### Phase 7: 注册 CLAUDE.md
+### Phase 8: 注册 CLAUDE.md
 
 在项目根目录生成 CLAUDE.md，注册 harness 指针：
 

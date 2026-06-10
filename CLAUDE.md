@@ -16,33 +16,21 @@
 6. **纠错成本低，等待成本高** — 快速合并+后续修复优于无限阻塞
 7. **Agent = Model + Harness** — 模型提供智能，Harness 让智能可用
 
-## Agents（7个）
+## 架构地图
 
-| Agent | 文件 | 职责 |
-|-------|------|------|
-| orchestrator | `.claude/agents/orchestrator.md` | 团队协调者 |
-| architect | `.claude/agents/architect.md` | 架构设计师 |
-| builder | `.claude/agents/builder.md` | 代码生成器 |
-| reviewer | `.claude/agents/reviewer.md` | 质量审查员 |
-| qa | `.claude/agents/qa.md` | 验证工程师 |
-| sre | `.claude/agents/sre.md` | 站点可靠性工程师 |
-| context-engineer | `.claude/agents/context-engineer.md` | 上下文工程师 |
+- [AGENTS.md](AGENTS.md) — 项目主文档和 harness 指针
+- Agent 定义：`.claude/agents/`（7 个）
+- Skill 定义：`.claude/skills/`（11 个）
+- 安装脚本：`scripts/install.mjs`
 
-## Skills（11个）
+## 导航指引
 
-| Skill | 文件 | 用途 |
-|-------|------|------|
-| harness-orchestrator | `.claude/skills/harness-orchestrator/SKILL.md` | 团队编排器 |
-| harness-init | `.claude/skills/harness-init/SKILL.md` | 一键初始化 harness |
-| context-setup | `.claude/skills/context-setup/SKILL.md` | 知识库架构生成 |
-| architecture-guard | `.claude/skills/architecture-guard/SKILL.md` | 架构边界强制执行 |
-| entropy-gc | `.claude/skills/entropy-gc/SKILL.md` | 熵管理与垃圾收集 |
-| observability-setup | `.claude/skills/observability-setup/SKILL.md` | 可观测性堆栈配置 |
-| sandbox-exec | `.claude/skills/sandbox-exec/SKILL.md` | 安全代码执行环境 |
-| quality-gate | `.claude/skills/quality-gate/SKILL.md` | 质量审查门禁 |
-| agent-readability | `.claude/skills/agent-readability/SKILL.md` | 智能体可读性优化 |
-| harness-evolve | `.claude/skills/harness-evolve/SKILL.md` | 反馈驱动演进 |
-| hooks-framework | `.claude/skills/hooks-framework/SKILL.md` | 确定性执行钩子 |
+- 初始化？`harness-init` / `harness-orchestrator`
+- 架构？`.claude/agents/architect.md`
+- 质量？`.claude/skills/quality-gate/SKILL.md`
+- 知识库？`.claude/skills/context-setup/SKILL.md`
+- Hooks？`.claude/skills/hooks-framework/SKILL.md`
+- 演进？`.claude/skills/harness-evolve/SKILL.md`
 
 ## Change History
 
@@ -51,3 +39,4 @@
 | 2026-06-09 | Initial configuration | All | 基于 OpenAI + LangChain Harness Engineering 规范创建 |
 | 2026-06-09 | hooks-framework 三工具统一 | hooks-framework | .mjs 脚本 + Claude/Codex/OpenCode 原生 hooks |
 | 2026-06-09 | 上下文管理强化 | hooks-framework | continuation → Stop hook, compaction → PreCompact hook |
+| 2026-06-10 | 跨平台改造 | scripts, hooks | 移除 install.sh，统一使用 install.mjs；修复所有脚本跨平台兼容性 |

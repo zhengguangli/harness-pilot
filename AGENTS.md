@@ -7,7 +7,7 @@ harness-pilot 是一套 Harness Engineering 技能包，为 Claude Code、Codex�
 - [CLAUDE.md](CLAUDE.md) — 项目主文档和 harness 指针
 - [README.md](README.md) — 安装和使用指南
 - Agent 定义：`.claude/agents/`（7 个）| Skill 定义：`.claude/skills/`（11 个）
-- 安装脚本：`scripts/install.sh`
+- 安装脚本：`scripts/install.mjs`
 
 ## 关键约束
 - **人类掌舵，智能体执行** — 工程师设计环境，AI 执行代码

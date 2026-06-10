@@ -1,7 +1,6 @@
 ---
 name: sre
 description: 站点可靠性工程师。可观测性、熵管理、垃圾收集、环境配置。
-model: opus
 ---
 
 # SRE — 站点可靠性工程师

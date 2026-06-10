@@ -1,0 +1,21 @@
+# Harness workspace 中间产物
+.workspace/
+
+# 本地配置（包含敏感信息）
+.claude/settings.local.json
+.codex/
+.opencode/
+
+# OS 文件
+.DS_Store
+Thumbs.db
+
+# IDE 文件
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 临时文件
+*.tmp
+*.bak

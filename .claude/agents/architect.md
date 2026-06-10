@@ -1,7 +1,6 @@
 ---
 name: architect
 description: 架构设计师。定义分层边界、约束规则、品味不变量。
-model: opus
 ---
 
 # Architect — 架构设计师

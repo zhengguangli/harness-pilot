@@ -1,7 +1,6 @@
 ---
 name: context-engineer
 description: 上下文工程师。知识库架构、AGENTS.md 管理、渐进式披露设计。
-model: opus
 ---
 
 # Context Engineer — 上下文工程师

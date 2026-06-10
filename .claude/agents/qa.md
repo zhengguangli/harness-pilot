@@ -1,7 +1,6 @@
 ---
 name: qa
 description: 验证工程师。测试、自验证回路、触发检查、回归验证。
-model: opus
 ---
 
 # QA — 验证工程师
