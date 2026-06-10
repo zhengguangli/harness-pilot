@@ -6,7 +6,7 @@ harness-pilot — Harness Engineering toolkit for Claude Code, Codex, OpenCode.
 ## Architecture Map
 - [CLAUDE.md](CLAUDE.md) — harness pointer
 - [README.md](README.md) — install & usage guide
-- Agents: `.claude/agents/` (7) | Skills: `.claude/skills/` (14)
+- Agents: `agents/` (7) | Skills: `skills/` (14)
 - Install: `scripts/install.mjs`
 
 ## Constraints
@@ -40,18 +40,18 @@ Human-intuitive + AI-readable. Strong typing, defensive coding, fail-fast. Singl
 
 ## Navigation
 - Init? `harness-init` / `harness-orchestrator`
-- Architecture? `.claude/agents/architect.md`
-- Quality? `.claude/skills/quality-gate/SKILL.md`
-- Knowledge? `.claude/skills/context-setup/SKILL.md`
-- Hooks? `.claude/skills/hooks-framework/SKILL.md`
-- Evolve? `.claude/skills/harness-evolve/SKILL.md`
+- Architecture? `agents/architect.md`
+- Quality? `skills/quality-gate/SKILL.md`
+- Knowledge? `skills/context-setup/SKILL.md`
+- Hooks? `skills/hooks-framework/SKILL.md`
+- Evolve? `skills/harness-evolve/SKILL.md`
 
 <!-- HARNESS-PILOT:START -->
 
 ## Architecture Map
 - See [CLAUDE.md](CLAUDE.md) — main project doc and harness pointer
-- Agent definitions: `.claude/agents/` — 7 specialized agents
-- Skill definitions: `.claude/skills/` — 14 standard skills
+- Agent definitions: `agents/` — 7 specialized agents
+- Skill definitions: `skills/` — 14 standard skills
 - Install script: `scripts/install.mjs` — unified installer
 
 ## Key Constraints
@@ -93,13 +93,13 @@ Human-intuitive + AI-readable. Strong typing, defensive coding, fail-fast. Singl
 
 ## Navigation
 - New project init? Use `harness-init` or `harness-orchestrator` skill
-- Architecture design? Read `.claude/agents/architect.md`
-- Quality review? Read `.claude/skills/quality-gate/SKILL.md`
-- Knowledge management? Read `.claude/skills/context-setup/SKILL.md`
-- Evolution feedback? Read `.claude/skills/harness-evolve/SKILL.md`
-- Hooks config? Read `.claude/skills/hooks-framework/SKILL.md`
-- Web search? Read `.claude/skills/web-search/SKILL.md`
-- MCP integration? Read `.claude/skills/mcp-connector/SKILL.md`
+- Architecture design? Read `agents/architect.md`
+- Quality review? Read `skills/quality-gate/SKILL.md`
+- Knowledge management? Read `skills/context-setup/SKILL.md`
+- Evolution feedback? Read `skills/harness-evolve/SKILL.md`
+- Hooks config? Read `skills/hooks-framework/SKILL.md`
+- Web search? Read `skills/web-search/SKILL.md`
+- MCP integration? Read `skills/mcp-connector/SKILL.md`
 - Install? Read `README.md` or run `node scripts/install.mjs --help`
 
 <!-- HARNESS-PILOT:END -->

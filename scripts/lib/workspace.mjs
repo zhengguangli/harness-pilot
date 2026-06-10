@@ -3,8 +3,14 @@
  *
  * Priority:
  *   1. HARNESS_WORKSPACE env var (user override, absolute path)
- *   2. CLAUDE_PROJECT_DIR + '.harness-polit'
+ *   2. Tool-specific project dir env var + '.harness-polit'
  *   3. process.cwd() + '.harness-polit'
+ *
+ * Supported env vars (by tool):
+ *   - Claude Code: CLAUDE_PROJECT_DIR
+ *   - Codex: CODEX_PROJECT_DIR
+ *   - OpenCode: OPENCODE_PROJECT_DIR
+ *   - Generic: PROJECT_DIR
  *
  * Usage:
  *   import { getWorkspaceDir, ensureWorkspace } from './scripts/lib/workspace.mjs'
@@ -19,8 +25,13 @@ export function getWorkspaceDir(projectDir) {
     return process.env.HARNESS_WORKSPACE;
   }
 
-  // 2. Project dir from env or arg
-  const root = projectDir || process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  // 2. Project dir from env or arg (check multiple tool env vars)
+  const root = projectDir
+    || process.env.CLAUDE_PROJECT_DIR
+    || process.env.CODEX_PROJECT_DIR
+    || process.env.OPENCODE_PROJECT_DIR
+    || process.env.PROJECT_DIR
+    || process.cwd();
 
   return join(root, '.harness-polit');
 }

@@ -133,14 +133,22 @@ function detectAiTools(targetDir) {
     tools.push('claude-code')
   }
 
-  if (existsSync(join(targetDir, 'AGENTS.md'))) {
+  if (existsSync(join(targetDir, '.agents'))) {
     tools.push('codex')
+  }
+
+  if (existsSync(join(targetDir, '.opencode'))) {
+    tools.push('opencode')
+  }
+
+  if (existsSync(join(targetDir, 'AGENTS.md'))) {
+    if (!tools.includes('codex')) tools.push('codex')
   }
 
   // 检查 opencode 命令
   try {
     execSync('opencode --version', { stdio: 'pipe' })
-    tools.push('opencode')
+    if (!tools.includes('opencode')) tools.push('opencode')
   } catch {}
 
   if (tools.length === 0) {
@@ -184,12 +192,12 @@ function countExisting(targetDir) {
     skippedFiles: 0
   }
 
-  const agentsDir = join(targetDir, '.claude', 'agents')
+  const agentsDir = join(targetDir, 'agents')
   if (existsSync(agentsDir)) {
     stats.existingAgents = readdirSync(agentsDir).filter(f => f.endsWith('.md')).length
   }
 
-  const skillsDir = join(targetDir, '.claude', 'skills')
+  const skillsDir = join(targetDir, 'skills')
   if (existsSync(skillsDir)) {
     stats.existingSkills = readdirSync(skillsDir, { recursive: true })
       .filter(f => typeof f === 'string' && f.endsWith('SKILL.md')).length
@@ -285,13 +293,21 @@ function injectSection(file, label, content, dryRun) {
 // ============================================================================
 // 增量注入 AGENTS.md
 // ============================================================================
-function installAgentsMd(targetDir, dryRun) {
+function installAgentsMd(targetDir, tool, dryRun) {
   const file = join(targetDir, 'AGENTS.md')
-  
+
+  // 根据工具类型确定路径
+  const pathsMap = {
+    claude: { agents: '.claude/agents', skills: '.claude/skills' },
+    codex: { agents: '.agents/agents', skills: '.agents/skills' },
+    opencode: { agents: '.opencode/agents', skills: '.opencode/skills' }
+  }
+  const paths = pathsMap[tool] || pathsMap.claude
+
   const harnessSection = `## Architecture Map
 - See [CLAUDE.md](CLAUDE.md) — main project doc and harness pointer
-- Agent definitions: \`.claude/agents/\` — 7 specialized agents
-- Skill definitions: \`.claude/skills/\` — 14 standard skills
+- Agent definitions: \`${paths.agents}/\` — 7 specialized agents
+- Skill definitions: \`${paths.skills}/\` — 14 standard skills
 - Install script: \`scripts/install.mjs\` — unified installer
 
 ## Key Constraints
@@ -333,13 +349,13 @@ function installAgentsMd(targetDir, dryRun) {
 
 ## Navigation
 - New project init? Use \`harness-init\` or \`harness-orchestrator\` skill
-- Architecture design? Read \`.claude/agents/architect.md\`
-- Quality review? Read \`.claude/skills/quality-gate/SKILL.md\`
-- Knowledge management? Read \`.claude/skills/context-setup/SKILL.md\`
-- Evolution feedback? Read \`.claude/skills/harness-evolve/SKILL.md\`
-- Hooks config? Read \`.claude/skills/hooks-framework/SKILL.md\`
-- Web search? Read \`.claude/skills/web-search/SKILL.md\`
-- MCP integration? Read \`.claude/skills/mcp-connector/SKILL.md\`
+- Architecture design? Read \`${paths.agents}/architect.md\`
+- Quality review? Read \`${paths.skills}/quality-gate/SKILL.md\`
+- Knowledge management? Read \`${paths.skills}/context-setup/SKILL.md\`
+- Evolution feedback? Read \`${paths.skills}/harness-evolve/SKILL.md\`
+- Hooks config? Read \`${paths.skills}/hooks-framework/SKILL.md\`
+- Web search? Read \`${paths.skills}/web-search/SKILL.md\`
+- MCP integration? Read \`${paths.skills}/mcp-connector/SKILL.md\`
 - Install? Read \`README.md\` or run \`node scripts/install.mjs --help\``
 
   return injectSection(file, 'AGENTS.md', harnessSection, dryRun)
@@ -378,16 +394,40 @@ function installClaudeMd(targetDir, dryRun) {
 }
 
 // ============================================================================
+// 占位符替换配置
+// ============================================================================
+const PLACEHOLDER_MAP = {
+  claude: { '{{SKILLS_DIR}}': '.claude/skills', '{{AGENTS_DIR}}': '.claude/agents' },
+  codex: { '{{SKILLS_DIR}}': '.agents/skills', '{{AGENTS_DIR}}': '.agents/agents' },
+  opencode: { '{{SKILLS_DIR}}': '.opencode/skills', '{{AGENTS_DIR}}': '.opencode/agents' }
+}
+
+function replacePlaceholders(content, tool) {
+  const map = PLACEHOLDER_MAP[tool]
+  if (!map) return content
+  let result = content
+  for (const [placeholder, value] of Object.entries(map)) {
+    result = result.replaceAll(placeholder, value)
+  }
+  return result
+}
+
+// ============================================================================
 // Agent 安装（--force 时对比更新）
 // ============================================================================
 function sha256(content) {
   return createHash('sha256').update(content).digest('hex')
 }
 
-function copyOrUpdate(srcFile, destFile, label, force, dryRun) {
+function copyOrUpdate(srcFile, destFile, label, force, dryRun, tool) {
   if (!existsSync(destFile)) {
     if (dryRun) { log(`[dry-run] 将创建: ${label}`); return 'install' }
-    copyFileSync(srcFile, destFile)
+    if (tool) {
+      const content = readFileSync(srcFile, 'utf-8')
+      writeFileSync(destFile, replacePlaceholders(content, tool))
+    } else {
+      copyFileSync(srcFile, destFile)
+    }
     ok(`已安装: ${label}`)
     return 'install'
   }
@@ -398,7 +438,9 @@ function copyOrUpdate(srcFile, destFile, label, force, dryRun) {
   }
 
   // --force: compare and update if different
-  const srcContent = readFileSync(srcFile, 'utf-8')
+  const srcContent = tool
+    ? replacePlaceholders(readFileSync(srcFile, 'utf-8'), tool)
+    : readFileSync(srcFile, 'utf-8')
   const destContent = readFileSync(destFile, 'utf-8')
 
   if (sha256(srcContent) === sha256(destContent)) {
@@ -407,33 +449,46 @@ function copyOrUpdate(srcFile, destFile, label, force, dryRun) {
   }
 
   if (dryRun) { log(`[dry-run] 将更新: ${label}`); return 'update' }
-  copyFileSync(srcFile, destFile)
+  writeFileSync(destFile, srcContent)
   update(`已更新: ${label}`)
   return 'update'
 }
 
-function installAgents(targetDir, force, dryRun) {
-  const dest = join(targetDir, '.claude', 'agents')
-  mkdirSync(dest, { recursive: true })
+function installAgents(targetDir, tool, force, dryRun) {
+  const agentDirs = []
+  switch (tool) {
+    case 'claude': agentDirs.push('.claude/agents'); break
+    case 'codex': agentDirs.push('.agents/agents'); break
+    case 'opencode': agentDirs.push('.opencode/agents'); break
+    case 'all': agentDirs.push('.claude/agents', '.agents/agents', '.opencode/agents'); break
+    default:
+      err(`未知工具: ${tool} (可选: claude, codex, opencode, all)`)
+      process.exit(1)
+  }
 
   const agents = [
     'orchestrator', 'architect', 'builder', 'reviewer', 'qa', 'sre', 'context-engineer'
   ]
 
   let installed = 0, updated = 0
-  for (const agent of agents) {
-    const file = join(dest, `${agent}.md`)
-    const srcFile = join(SCRIPT_DIR, '..', '.claude', 'agents', `${agent}.md`)
-    const label = `.claude/agents/${agent}.md`
+  for (const destDir of agentDirs) {
+    const dest = join(targetDir, destDir)
+    mkdirSync(dest, { recursive: true })
 
-    if (!existsSync(srcFile)) {
-      warn(`无法下载: ${label}`)
-      continue
+    for (const agent of agents) {
+      const file = join(dest, `${agent}.md`)
+      const srcFile = join(SCRIPT_DIR, '..', 'agents', `${agent}.md`)
+      const label = `${destDir}/${agent}.md`
+
+      if (!existsSync(srcFile)) {
+        warn(`无法下载: ${label}`)
+        continue
+      }
+
+      const result = copyOrUpdate(srcFile, file, label, force, dryRun, tool)
+      if (result === 'install') installed++
+      else if (result === 'update') updated++
     }
-
-    const result = copyOrUpdate(srcFile, file, label, force, dryRun)
-    if (result === 'install') installed++
-    else if (result === 'update') updated++
   }
 
   return { installed, updated }
@@ -469,7 +524,7 @@ function installSkills(targetDir, tool, force, dryRun) {
     for (const skill of skills) {
       const skillDir = join(dest, skill)
       const skillFile = join(skillDir, 'SKILL.md')
-      const srcFile = join(SCRIPT_DIR, '..', '.claude', 'skills', skill, 'SKILL.md')
+      const srcFile = join(SCRIPT_DIR, '..', 'skills', skill, 'SKILL.md')
       const label = `${destDir}/${skill}/SKILL.md`
 
       if (!existsSync(srcFile)) {
@@ -478,14 +533,14 @@ function installSkills(targetDir, tool, force, dryRun) {
       }
 
       mkdirSync(skillDir, { recursive: true })
-      const result = copyOrUpdate(srcFile, skillFile, label, force, dryRun)
+      const result = copyOrUpdate(srcFile, skillFile, label, force, dryRun, tool)
       if (result === 'install') installed++
       else if (result === 'update') updated++
 
       // Copy subdirectories (scripts/references), always do it
       if (!dryRun) {
         for (const subdir of ['references', 'scripts']) {
-          const src = join(SCRIPT_DIR, '..', '.claude', 'skills', skill, subdir)
+          const src = join(SCRIPT_DIR, '..', 'skills', skill, subdir)
           const dst = join(skillDir, subdir)
           if (existsSync(src) && (!existsSync(dst) || force)) {
             mkdirSync(skillDir, { recursive: true })
@@ -583,8 +638,16 @@ function installDocsStructure(targetDir, dryRun) {
 // ============================================================================
 // CI 模板生成（GitHub Actions）
 // ============================================================================
-function installCiTemplates(targetDir, dryRun) {
+function installCiTemplates(targetDir, tool, dryRun) {
   const dest = join(targetDir, '.github', 'workflows')
+
+  // 根据工具类型确定 skills 目录路径
+  const skillsDirMap = {
+    claude: '.claude/skills',
+    codex: '.agents/skills',
+    opencode: '.opencode/skills'
+  }
+  const skillsDir = skillsDirMap[tool] || '.claude/skills'
 
   // hooks.yml — push/PR 时运行 harness hooks
   const hooksFile = join(dest, 'harness-hooks.yml')
@@ -617,14 +680,14 @@ jobs:
 
       - name: Pre-execution hooks
         run: |
-          if [ -f .claude/skills/hooks-framework/scripts/context-check.mjs ]; then
-            node .claude/skills/hooks-framework/scripts/context-check.mjs
+          if [ -f ${skillsDir}/hooks-framework/scripts/context-check.mjs ]; then
+            node ${skillsDir}/hooks-framework/scripts/context-check.mjs
           fi
 
       - name: Post-execution hooks
         run: |
-          if [ -f .claude/skills/hooks-framework/scripts/lint-check.mjs ]; then
-            node .claude/skills/hooks-framework/scripts/lint-check.mjs
+          if [ -f ${skillsDir}/hooks-framework/scripts/lint-check.mjs ]; then
+            node ${skillsDir}/hooks-framework/scripts/lint-check.mjs
           fi
 
       - name: Upload trace logs
@@ -669,8 +732,8 @@ jobs:
 
       - name: Check AGENTS.md freshness
         run: |
-          if [ -f .claude/skills/hooks-framework/scripts/context-check.mjs ]; then
-            node .claude/skills/hooks-framework/scripts/context-check.mjs || true
+          if [ -f ${skillsDir}/hooks-framework/scripts/context-check.mjs ]; then
+            node ${skillsDir}/hooks-framework/scripts/context-check.mjs || true
           fi
 
       - name: Check for stale docs
@@ -699,8 +762,8 @@ jobs:
 
       - name: Quality metrics
         run: |
-          if [ -f .claude/skills/hooks-framework/scripts/quality-metric.mjs ]; then
-            node .claude/skills/hooks-framework/scripts/quality-metric.mjs || true
+          if [ -f ${skillsDir}/hooks-framework/scripts/quality-metric.mjs ]; then
+            node ${skillsDir}/hooks-framework/scripts/quality-metric.mjs || true
           fi
           if [ -f .harness-polit/metrics/quality_$(date +%Y%m%d).json ]; then
             echo "### 质量指标" >> /tmp/doc-report.md
@@ -815,8 +878,8 @@ function installCodexHooks(targetDir, dryRun) {
           {
             matcher: 'startup|resume',
             hooks: [
-              { type: 'command', command: 'node', args: ['$(git rev-parse --show-toplevel)/.claude/skills/hooks-framework/scripts/context-check.mjs'] },
-              { type: 'command', command: 'node', args: ['$(git rev-parse --show-toplevel)/.claude/skills/hooks-framework/scripts/env-verify.mjs'] }
+              { type: 'command', command: 'node', args: ['$(git rev-parse --show-toplevel)/.agents/skills/hooks-framework/scripts/context-check.mjs'] },
+              { type: 'command', command: 'node', args: ['$(git rev-parse --show-toplevel)/.agents/skills/hooks-framework/scripts/env-verify.mjs'] }
             ]
           }
         ],
@@ -824,28 +887,28 @@ function installCodexHooks(targetDir, dryRun) {
           {
             matcher: 'Edit|Write',
             hooks: [
-              { type: 'command', command: 'node', args: ['$(git rev-parse --show-toplevel)/.claude/skills/hooks-framework/scripts/lint-check.mjs'] }
+              { type: 'command', command: 'node', args: ['$(git rev-parse --show-toplevel)/.agents/skills/hooks-framework/scripts/lint-check.mjs'] }
             ]
           },
           {
             hooks: [
-              { type: 'command', command: 'node', args: ['$(git rev-parse --show-toplevel)/.claude/skills/hooks-framework/scripts/tool-offload.mjs'] }
+              { type: 'command', command: 'node', args: ['$(git rev-parse --show-toplevel)/.agents/skills/hooks-framework/scripts/tool-offload.mjs'] }
             ]
           }
         ],
         PreCompact: [
           {
             hooks: [
-              { type: 'command', command: 'node', args: ['$(git rev-parse --show-toplevel)/.claude/skills/hooks-framework/scripts/compaction.mjs'] }
+              { type: 'command', command: 'node', args: ['$(git rev-parse --show-toplevel)/.agents/skills/hooks-framework/scripts/compaction.mjs'] }
             ]
           }
         ],
         Stop: [
           {
             hooks: [
-              { type: 'command', command: 'node', args: ['$(git rev-parse --show-toplevel)/.claude/skills/hooks-framework/scripts/continuation.mjs'] },
-              { type: 'command', command: 'node', args: ['$(git rev-parse --show-toplevel)/.claude/skills/hooks-framework/scripts/trace-log.mjs'] },
-              { type: 'command', command: 'node', args: ['$(git rev-parse --show-toplevel)/.claude/skills/hooks-framework/scripts/quality-metric.mjs'] }
+              { type: 'command', command: 'node', args: ['$(git rev-parse --show-toplevel)/.agents/skills/hooks-framework/scripts/continuation.mjs'] },
+              { type: 'command', command: 'node', args: ['$(git rev-parse --show-toplevel)/.agents/skills/hooks-framework/scripts/trace-log.mjs'] },
+              { type: 'command', command: 'node', args: ['$(git rev-parse --show-toplevel)/.agents/skills/hooks-framework/scripts/quality-metric.mjs'] }
             ]
           }
         ]
@@ -871,7 +934,7 @@ function installOpencodeHooks(targetDir, dryRun) {
     writeFileSync(pluginFile, `import type { Plugin } from "@opencode-ai/plugin"
 
 export const HarnessHooks: Plugin = async ({ $, directory }) => {
-  const scripts = \`\${directory}/.claude/skills/hooks-framework/scripts\`
+  const scripts = \`\${directory}/.opencode/skills/hooks-framework/scripts\`
 
   return {
     "session.created": async () => {
@@ -941,10 +1004,22 @@ async function main() {
   console.log(`  ┌─ Tool: ${config.tool}`)
 
   switch (config.tool) {
-    case 'claude': console.log('  ├─ Skills → .claude/skills/'); break
-    case 'codex': console.log('  ├─ Skills → .agents/skills/'); break
-    case 'opencode': console.log('  ├─ Skills → .opencode/skills/'); break
-    case 'all': console.log('  ├─ Skills → .claude/skills/ + .agents/skills/ + .opencode/skills/'); break
+    case 'claude':
+      console.log('  ├─ Skills → .claude/skills/')
+      console.log('  ├─ Agents → .claude/agents/')
+      break
+    case 'codex':
+      console.log('  ├─ Skills → .agents/skills/')
+      console.log('  ├─ Agents → .agents/agents/')
+      break
+    case 'opencode':
+      console.log('  ├─ Skills → .opencode/skills/')
+      console.log('  ├─ Agents → .opencode/agents/')
+      break
+    case 'all':
+      console.log('  ├─ Skills → .claude/skills/ + .agents/skills/ + .opencode/skills/')
+      console.log('  ├─ Agents → .claude/agents/ + .agents/agents/ + .opencode/agents/')
+      break
   }
 
   if (existsSync(join(targetDir, 'AGENTS.md'))) {
@@ -953,13 +1028,15 @@ async function main() {
     console.log('  ├─ AGENTS.md — create new')
   }
 
-  if (existsSync(join(targetDir, 'CLAUDE.md'))) {
-    console.log('  ├─ CLAUDE.md — inject harness section')
-  } else {
-    console.log('  ├─ CLAUDE.md — create new')
+  // CLAUDE.md 只在 Claude Code 时显示
+  if (config.tool === 'claude' || config.tool === 'all') {
+    if (existsSync(join(targetDir, 'CLAUDE.md'))) {
+      console.log('  ├─ CLAUDE.md — inject harness section')
+    } else {
+      console.log('  ├─ CLAUDE.md — create new')
+    }
   }
 
-  console.log('  ├─ Agents → .claude/agents/')
   console.log('  ├─ docs/ — fill gaps only')
   console.log('  └─ CI → .github/workflows/ (hooks + doc-gardening)')
   console.log('')
@@ -982,13 +1059,18 @@ async function main() {
   log('Starting install...')
   console.log('')
 
-  const agentResult = installAgents(targetDir, config.force, config.dryRun)
+  const agentResult = installAgents(targetDir, config.tool, config.force, config.dryRun)
   const skillResult = installSkills(targetDir, config.tool, config.force, config.dryRun)
   installSharedLib(targetDir, config.dryRun)
-  installClaudeMd(targetDir, config.dryRun)
-  installAgentsMd(targetDir, config.dryRun)
+
+  // CLAUDE.md 只在 Claude Code 时安装
+  if (config.tool === 'claude' || config.tool === 'all') {
+    installClaudeMd(targetDir, config.dryRun)
+  }
+
+  installAgentsMd(targetDir, config.tool, config.dryRun)
   installDocsStructure(targetDir, config.dryRun)
-  installCiTemplates(targetDir, config.dryRun)
+  installCiTemplates(targetDir, config.tool, config.dryRun)
   installHooksConfig(targetDir, config.tool, config.dryRun)
 
   console.log('')
@@ -1008,15 +1090,25 @@ async function main() {
   console.log('  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
   console.log('')
   console.log('  Here is what happened:')
-  console.log('    ✓ 7 agents → .claude/agents/')
-  console.log('    ✓ 14 skills → .claude/skills/')
+
+  const agentPaths = { claude: '.claude/agents/', codex: '.agents/agents/', opencode: '.opencode/agents/' }
+  const skillPaths = { claude: '.claude/skills/', codex: '.agents/skills/', opencode: '.opencode/skills/' }
+  const tools = config.tool === 'all' ? ['claude', 'codex', 'opencode'] : [config.tool]
+  const agentPathStr = tools.map(t => agentPaths[t]).join(' + ')
+  const skillPathStr = tools.map(t => skillPaths[t]).join(' + ')
+
+  console.log(`    ✓ 7 agents → ${agentPathStr}`)
+  console.log(`    ✓ 14 skills → ${skillPathStr}`)
   if (agentResult.installed > 0 || skillResult.installed > 0) {
     console.log(`    (${agentResult.installed} agent + ${skillResult.installed} skill newly installed)`)
   }
   if (agentResult.updated > 0 || skillResult.updated > 0) {
     console.log(`    (${agentResult.updated} agent + ${skillResult.updated} skill updated)`)
   }
-  console.log('    ✓ AGENTS.md / CLAUDE.md — harness pointer injected')
+  console.log('    ✓ AGENTS.md — harness pointer injected')
+  if (config.tool === 'claude' || config.tool === 'all') {
+    console.log('    ✓ CLAUDE.md — harness pointer injected')
+  }
   console.log('    ✓ docs/ — skeleton directory created')
 
   console.log('')

@@ -68,18 +68,18 @@ Saves 50-90% repeated context token cost. Auto-cached:
 ## Architecture Map
 
 - [AGENTS.md](AGENTS.md) — main project doc + harness pointer
-- Agents: `.claude/agents/` (7)
-- Skills: `.claude/skills/` (14)
+- Agents: `agents/` (7)
+- Skills: `skills/` (14)
 - Install: `scripts/install.mjs`
 
 ## Navigation
 
 - Init? `harness-init` / `harness-orchestrator`
-- Architecture? `.claude/agents/architect.md`
-- Quality? `.claude/skills/quality-gate/SKILL.md`
-- Knowledge? `.claude/skills/context-setup/SKILL.md`
-- Hooks? `.claude/skills/hooks-framework/SKILL.md`
-- Evolve? `.claude/skills/harness-evolve/SKILL.md`
+- Architecture? `agents/architect.md`
+- Quality? `skills/quality-gate/SKILL.md`
+- Knowledge? `skills/context-setup/SKILL.md`
+- Hooks? `skills/hooks-framework/SKILL.md`
+- Evolve? `skills/harness-evolve/SKILL.md`
 
 See [CHANGELOG.md](CHANGELOG.md) for change history.
 
@@ -94,8 +94,8 @@ See [CHANGELOG.md](CHANGELOG.md) for change history.
 ### Architecture Map
 
 - [AGENTS.md](AGENTS.md) — main project doc and harness pointer
-- Agent definitions: `.claude/agents/` (7)
-- Skill definitions: `.claude/skills/` (14)
+- Agent definitions: `agents/` (7)
+- Skill definitions: `skills/` (14)
 - Install script: `scripts/install.mjs`
 
 ### Core Principles
