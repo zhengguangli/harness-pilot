@@ -25,7 +25,7 @@ See `.claude/skills/hooks-framework/SKILL.md` for details.
 Before workflow starts, check existing outputs to determine execution mode:
 
 - `.harness-polit/` exists + user requests partial modification → **Partial Re-execution** (only invoke relevant agents)
-- `.harness-polit/` exists + user provides new input → **New Execution** (move `.harness-polit/` to `.workspace_prev/`)
+- `.harness-polit/` exists + user provides new input → **New Execution** (move `.harness-polit/` to `.harness-polit_prev/`)
 - `.harness-polit/` does not exist → **Initial Execution**
 
 ## Phase 1: Project Discovery & Requirements Analysis

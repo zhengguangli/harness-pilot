@@ -90,7 +90,7 @@ orchestrator  →  architect  →  builder  →  reviewer  →  qa
 | **Map, Not Manual** | AGENTS.md ≤100 lines. Pointer to docs/, not encyclopedia. Protects context window. |
 | **Progressive Disclosure** | Skills loaded on demand via trigger words, not pre-injected at startup. |
 | **Compaction** | Context near full? Intelligent summarization + offload to filesystem. |
-| **Tool Offload** | Large tool outputs truncated to head/tail, full content → `.workspace/offloaded/`. |
+| **Tool Offload** | Large tool outputs truncated to head/tail, full content → `.harness-polit/offloaded/`. |
 | **File Ref Tracking** | Automatically track and unload stale file references via TTL. |
 | **Prompt Caching** | Static context (system prompts, schemas) cached by API. Saves 50-90% repeat cost. |
 
