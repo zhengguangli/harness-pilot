@@ -705,6 +705,11 @@ function installClaudeHooks(targetDir, dryRun) {
           hooks: [
             { type: 'command', command: 'node', args: ['${CLAUDE_PROJECT_DIR}/.claude/skills/hooks-framework/scripts/lint-check.mjs'] }
           ]
+        },
+        {
+          hooks: [
+            { type: 'command', command: 'node', args: ['${CLAUDE_PROJECT_DIR}/.claude/skills/hooks-framework/scripts/tool-offload.mjs'] }
+          ]
         }
       ],
       PreCompact: [
@@ -779,6 +784,11 @@ function installCodexHooks(targetDir, dryRun) {
             hooks: [
               { type: 'command', command: 'node', args: ['$(git rev-parse --show-toplevel)/.claude/skills/hooks-framework/scripts/lint-check.mjs'] }
             ]
+          },
+          {
+            hooks: [
+              { type: 'command', command: 'node', args: ['$(git rev-parse --show-toplevel)/.claude/skills/hooks-framework/scripts/tool-offload.mjs'] }
+            ]
           }
         ],
         PreCompact: [
@@ -829,6 +839,10 @@ export const HarnessHooks: Plugin = async ({ $, directory }) => {
 
     "file.edited": async () => {
       try { await $\`node \${scripts}/lint-check.mjs\`.quiet() } catch {}
+    },
+
+    "tool.executed": async () => {
+      try { await $\`node \${scripts}/tool-offload.mjs\`.quiet() } catch {}
     },
 
     "experimental.session.compacting": async (_input, output) => {

@@ -23,12 +23,32 @@ install.mjs（适配层：转译为各工具原生格式）
 scripts/（执行层：.mjs 脚本，三工具通用）
 ```
 
+## 核心机制
+
+### Tool Offload（工具调用卸载）
+
+**问题：** 大型工具输出（如测试结果、日志、文件列表）会快速填满上下文窗口，导致上下文腐烂。
+
+**解决方案：** 当工具输出超过阈值（默认 2000 字符）时，自动卸载到文件系统，只保留首尾引用。
+
+**工作原理：**
+1. 检测工具输出大小
+2. 超过阈值 → 完整内容写入 `.workspace/offloaded/`
+3. 返回摘要：首 20 行 + 尾 10 行 + 文件路径引用
+4. 模型可通过 `cat` 命令查看完整内容
+
+**优势：**
+- 保护上下文窗口不被大型输出污染
+- 保留完整信息的可访问性
+- 支持渐进式披露：按需查看完整内容
+
 ## 抽象事件映射
 
 | 抽象事件 | Claude Code | Codex | OpenCode |
 |----------|-------------|-------|----------|
 | `on_session_start` | `SessionStart` | `SessionStart` | `session.created` |
 | `on_file_edit` | `PostToolUse(Edit\|Write)` | `PostToolUse(Edit\|Write)` | `file.edited` |
+| `on_tool_output` | `PostToolUse(*)` | `PostToolUse(*)` | `tool.executed` |
 | `on_compact` | `PreCompact` | `PreCompact` | `experimental.session.compacting` |
 | `on_turn_end` | `Stop` | `Stop` | `session.idle` |
 
@@ -46,6 +66,7 @@ scripts/（执行层：.mjs 脚本，三工具通用）
     ├── test-run.mjs          ← 测试套件
     ├── continuation.mjs      ← Ralph Loop 续行检测
     ├── compaction.mjs        ← 上下文压缩
+    ├── tool-offload.mjs      ← 工具输出卸载
     ├── trace-log.mjs         ← 执行日志
     └── quality-metric.mjs    ← 质量指标
 ```
@@ -73,6 +94,8 @@ const result = contextCheck(projectDir)
 ```bash
 node .claude/skills/hooks-framework/scripts/context-check.mjs
 node .claude/skills/hooks-framework/scripts/lint-check.mjs
+# 工具输出卸载（JSON 输入）
+echo '{"tool_output":"大型输出内容...","tool_name":"test"}' | node .claude/skills/hooks-framework/scripts/tool-offload.mjs
 ```
 
 ### install.mjs 自动生成
@@ -98,6 +121,7 @@ node scripts/install.mjs --tool all      → 三个都生成
 - `.workspace/metrics/` — 质量指标
 - `.workspace/context_summary.md` — 压缩摘要
 - `.workspace/continuation_prompt.md` — 续行提示
+- `.workspace/offloaded/` — 卸载的工具输出（首尾引用 + 完整内容）
 
 ## 质量标准
 
@@ -105,3 +129,4 @@ node scripts/install.mjs --tool all      → 三个都生成
 - 脚本无外部依赖（Node.js 内置模块）
 - 三平台通用（macOS / Linux / Windows）
 - 所有脚本支持 CLI 和 import 双模式
+- Tool Offload 阈值可配置（默认 2000 字符）

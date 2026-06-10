@@ -121,3 +121,47 @@ Python/JS/Ruby 项目 → 提高以下检查权重：
 - 每条审查意见附带具体修复指令
 - 拒绝时必须说明原因和修复路径
 - 审查报告可在 1 分钟内理解
+
+## 自动化验证
+
+### 验证脚本
+
+使用 `harness-verify.mjs` 进行跨平台自动化质量检查：
+
+```bash
+# 在目标项目中运行
+cd /path/to/your/project
+node /path/to/harness-polit/.claude/skills/quality-gate/harness-verify.mjs
+
+# 或者指定目标目录
+node harness-verify.mjs /path/to/your/project
+```
+
+**跨平台支持：** macOS / Linux / Windows（无需 bash）
+
+### 验证清单
+
+详见 `VERIFICATION_CHECKLIST.md`，包含：
+- 核心组件验证（ReAct、Tool Offload、浏览器、文件系统）
+- Hooks 框架验证（6 个脚本）
+- Agent 团队验证（7 个 agent）
+- Skill 团队验证（11 个 skill）
+- 配置文件验证（CLAUDE.md、AGENTS.md、settings.json）
+- 项目测试验证（单元测试）
+
+### 质量标准
+
+| 指标 | 标准 | 权重 |
+|------|------|------|
+| 核心组件完整性 | 100% | 30% |
+| Hooks 框架可用性 | 100% | 25% |
+| Agent 团队完整性 | 100% | 20% |
+| Skill 团队完整性 | 100% | 15% |
+| 项目测试通过率 | 100% | 10% |
+
+**总分 = Σ(指标 × 权重)**
+
+- **优秀**: 95-100%
+- **良好**: 85-94%
+- **合格**: 75-84%
+- **不合格**: < 75%

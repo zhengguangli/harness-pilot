@@ -3,6 +3,7 @@
 # 抽象事件名 → 各工具原生事件映射:
 #   on_session_start  → Claude: SessionStart       Codex: SessionStart         OpenCode: session.created
 #   on_file_edit      → Claude: PostToolUse(Edit)   Codex: PostToolUse(Edit)    OpenCode: file.edited
+#   on_tool_output    → Claude: PostToolUse(*)       Codex: PostToolUse(*)       OpenCode: tool.executed
 #   on_compact        → Claude: PreCompact          Codex: PreCompact           OpenCode: experimental.session.compacting
 #   on_turn_end       → Claude: Stop                Codex: Stop                 OpenCode: session.idle
 #
@@ -19,6 +20,11 @@ hooks:
   on_file_edit:
     - script: lint-check.mjs
       description: 架构边界 + docs/ 大小约束检查
+
+  on_tool_output:
+    - script: tool-offload.mjs
+      description: 工具输出卸载 — 大型输出只保留首尾引用，完整内容写入文件系统
+      condition: output_size > 2000
 
   on_compact:
     - script: compaction.mjs

@@ -162,6 +162,8 @@ your-project/
 
 - **OpenAI: Harness Engineering** — 用 Codex 从零构建百万行代码产品的经验总结。仓库即记录系统、约束即加速器、品味不变量。
 - **LangChain: Agent Anatomy** — Agent = Model + Harness 的定义框架。文件系统作为协作表面、Ralph 续行循环、上下文腐烂防护。
+- **LangChain: Deep Agents** — 工业级 harness 构建库。提供文件系统、沙箱、浏览器、子代理编排等核心原语的参考实现。
+- **Terminal Bench 2.0** — Agent 性能基准测试。用于评估不同 harness 配置的效果。
 
 > 模型在进化，Harness 也在进化。这不是一次性产物，是一个持续演进的系统。
 
