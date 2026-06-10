@@ -43,11 +43,11 @@ After each harness execution, ask the user:
 2. Read existing content
 3. Make minimal modification
 4. Verify the modification is effective
-5. Update CLAUDE.md change history
+5. Update CHANGELOG.md change history
 
 ### Step 4: Change History
 
-Record in the CLAUDE.md change history table:
+Record in the CHANGELOG.md change history table:
 
 ```markdown
 **Change History:**
@@ -184,7 +184,7 @@ Perform systematic checks, modifications, and synchronization on existing harnes
 
 **Output:**
 - Modified agent/skill files
-- Updated CLAUDE.md change history
+- Updated CHANGELOG.md change history
 - Evolution report
 
 ## Quality Standards

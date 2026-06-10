@@ -150,7 +150,7 @@ for (const group of groups) {
 
 **Execution Mode: Sub-agent**
 
-1. Generate CLAUDE.md (with harness pointer and change history)
+1. Generate CLAUDE.md (harness pointer only, change history → CHANGELOG.md)
 2. Clean up `.workspace/` intermediate artifacts
 3. Generate final delivery checklist
 

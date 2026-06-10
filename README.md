@@ -182,7 +182,8 @@ harness   harness  context   arch    quality  sandbox  observ   entropy  harness
 
 ```
 your-project/
-├── CLAUDE.md                  ← Harness 指针 + 变更历史
+├── CLAUDE.md                  ← Harness 指针
+├── CHANGELOG.md               ← 变更历史
 ├── AGENTS.md                  ← 知识目录（≤100行）
 ├── .claude/
 │   ├── agents/                ← 7 个 agent 定义
