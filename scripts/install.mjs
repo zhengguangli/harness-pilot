@@ -17,6 +17,7 @@ import { join, dirname, resolve } from 'path'
 import { execSync } from 'child_process'
 import { fileURLToPath } from 'url'
 import { createInterface } from 'readline'
+import { createHash } from 'crypto'
 
 // ============================================================================
 // 配置
@@ -46,6 +47,7 @@ function ok(msg) { console.log(`${colors.green}[ok]${colors.reset} ${msg}`) }
 function warn(msg) { console.log(`${colors.yellow}[warn]${colors.reset} ${msg}`) }
 function err(msg) { console.error(`${colors.red}[error]${colors.reset} ${msg}`) }
 function skip(msg) { console.log(`${colors.cyan}[skip]${colors.reset} ${msg}`) }
+function update(msg) { console.log(`${colors.magenta}[update]${colors.reset} ${msg}`) }
 
 // ============================================================================
 // 参数解析
@@ -56,7 +58,8 @@ function parseArgs() {
     targetDir: '.',
     tool: 'claude',
     dryRun: false,
-    skipConfirm: false
+    skipConfirm: false,
+    force: false
   }
 
   for (let i = 0; i < args.length; i++) {
@@ -73,6 +76,10 @@ function parseArgs() {
       case '--yes':
       case '-y':
         config.skipConfirm = true
+        break
+      case '--force':
+      case '-f':
+        config.force = true
         break
       case '--version':
         console.log(`harness-pilot v${VERSION}`)
@@ -91,6 +98,7 @@ function parseArgs() {
                    all      — 安装到全部三个目录
   --dry-run      仅预览，不实际写入
   --yes, -y      跳过确认提示
+  --force, -f    强制更新已存在的文件（sha256 对比）
   --version      显示版本号
   --help, -h     显示帮助
 `)
@@ -369,9 +377,41 @@ function installClaudeMd(targetDir, dryRun) {
 }
 
 // ============================================================================
-// Agent 安装（仅补充缺失）
+// Agent 安装（--force 时对比更新）
 // ============================================================================
-function installAgents(targetDir, dryRun) {
+function sha256(content) {
+  return createHash('sha256').update(content).digest('hex')
+}
+
+function copyOrUpdate(srcFile, destFile, label, force, dryRun) {
+  if (!existsSync(destFile)) {
+    if (dryRun) { log(`[dry-run] 将创建: ${label}`); return 'install' }
+    copyFileSync(srcFile, destFile)
+    ok(`已安装: ${label}`)
+    return 'install'
+  }
+
+  if (!force) {
+    skip(`已存在: ${label}`)
+    return 'skip'
+  }
+
+  // --force: compare and update if different
+  const srcContent = readFileSync(srcFile, 'utf-8')
+  const destContent = readFileSync(destFile, 'utf-8')
+
+  if (sha256(srcContent) === sha256(destContent)) {
+    skip(`已存在（内容相同）: ${label}`)
+    return 'skip'
+  }
+
+  if (dryRun) { log(`[dry-run] 将更新: ${label}`); return 'update' }
+  copyFileSync(srcFile, destFile)
+  update(`已更新: ${label}`)
+  return 'update'
+}
+
+function installAgents(targetDir, force, dryRun) {
   const dest = join(targetDir, '.claude', 'agents')
   mkdirSync(dest, { recursive: true })
 
@@ -379,43 +419,29 @@ function installAgents(targetDir, dryRun) {
     'orchestrator', 'architect', 'builder', 'reviewer', 'qa', 'sre', 'context-engineer'
   ]
 
-  let installed = 0
+  let installed = 0, updated = 0
   for (const agent of agents) {
     const file = join(dest, `${agent}.md`)
+    const srcFile = join(SCRIPT_DIR, '..', '.claude', 'agents', `${agent}.md`)
+    const label = `.claude/agents/${agent}.md`
 
-    if (existsSync(file)) {
-      skip(`已存在: .claude/agents/${agent}.md`)
+    if (!existsSync(srcFile)) {
+      warn(`无法下载: ${label}`)
       continue
     }
 
-    if (dryRun) {
-      log(`[dry-run] 将创建: .claude/agents/${agent}.md`)
-    } else {
-      const srcFile = join(SCRIPT_DIR, '..', '.claude', 'agents', `${agent}.md`)
-      if (existsSync(srcFile)) {
-        copyFileSync(srcFile, file)
-      } else {
-        // 从远程下载
-        try {
-          const url = `${REPO_URL}/raw/main/.claude/agents/${agent}.md`
-          execSync(`curl -fsSL "${url}" -o "${file}"`, { stdio: 'pipe' })
-        } catch {
-          warn(`无法下载: .claude/agents/${agent}.md`)
-          continue
-        }
-      }
-      ok(`已安装 agent: ${agent}`)
-      installed++
-    }
+    const result = copyOrUpdate(srcFile, file, label, force, dryRun)
+    if (result === 'install') installed++
+    else if (result === 'update') updated++
   }
 
-  return installed
+  return { installed, updated }
 }
 
 // ============================================================================
 // 按工具类型安装 skills
 // ============================================================================
-function installSkills(targetDir, tool, dryRun) {
+function installSkills(targetDir, tool, force, dryRun) {
   const skillDirs = []
   switch (tool) {
     case 'claude': skillDirs.push('.claude/skills'); break
@@ -433,8 +459,8 @@ function installSkills(targetDir, tool, dryRun) {
     'agent-readability', 'harness-evolve', 'hooks-framework',
     'web-search', 'mcp-connector', 'tool-search'
   ]
+  let installed = 0, updated = 0
 
-  let installed = 0
   for (const destDir of skillDirs) {
     const dest = join(targetDir, destDir)
     mkdirSync(dest, { recursive: true })
@@ -442,39 +468,25 @@ function installSkills(targetDir, tool, dryRun) {
     for (const skill of skills) {
       const skillDir = join(dest, skill)
       const skillFile = join(skillDir, 'SKILL.md')
+      const srcFile = join(SCRIPT_DIR, '..', '.claude', 'skills', skill, 'SKILL.md')
+      const label = `${destDir}/${skill}/SKILL.md`
 
-      if (existsSync(skillFile)) {
-        skip(`已存在: ${destDir}/${skill}/SKILL.md`)
-      } else {
-        mkdirSync(skillDir, { recursive: true })
-
-        if (dryRun) {
-          log(`[dry-run] 将创建: ${destDir}/${skill}/SKILL.md`)
-        } else {
-          const srcFile = join(SCRIPT_DIR, '..', '.claude', 'skills', skill, 'SKILL.md')
-          if (existsSync(srcFile)) {
-            copyFileSync(srcFile, skillFile)
-          } else {
-            // 从远程下载
-            try {
-              const url = `${REPO_URL}/raw/main/.claude/skills/${skill}/SKILL.md`
-              execSync(`curl -fsSL "${url}" -o "${skillFile}"`, { stdio: 'pipe' })
-            } catch {
-              warn(`无法下载: ${destDir}/${skill}/SKILL.md`)
-              continue
-            }
-          }
-          ok(`已安装: ${destDir}/${skill}/SKILL.md`)
-          installed++
-        }
+      if (!existsSync(srcFile)) {
+        warn(`无法下载: ${label}`)
+        continue
       }
 
-      // 始终复制子目录（scripts/references），即使 SKILL.md 已存在
+      mkdirSync(skillDir, { recursive: true })
+      const result = copyOrUpdate(srcFile, skillFile, label, force, dryRun)
+      if (result === 'install') installed++
+      else if (result === 'update') updated++
+
+      // Copy subdirectories (scripts/references), always do it
       if (!dryRun) {
         for (const subdir of ['references', 'scripts']) {
           const src = join(SCRIPT_DIR, '..', '.claude', 'skills', skill, subdir)
           const dst = join(skillDir, subdir)
-          if (existsSync(src) && !existsSync(dst)) {
+          if (existsSync(src) && (!existsSync(dst) || force)) {
             mkdirSync(skillDir, { recursive: true })
             copyDirSync(src, dst)
             ok(`已补充: ${destDir}/${skill}/${subdir}/`)
@@ -484,7 +496,7 @@ function installSkills(targetDir, tool, dryRun) {
     }
   }
 
-  return installed
+  return { installed, updated }
 }
 
 function copyDirSync(src, dest) {
@@ -947,8 +959,8 @@ async function main() {
   log('开始安装...')
   console.log('')
 
-  installAgents(targetDir, config.dryRun)
-  installSkills(targetDir, config.tool, config.dryRun)
+  const agentResult = installAgents(targetDir, config.force, config.dryRun)
+  const skillResult = installSkills(targetDir, config.tool, config.force, config.dryRun)
   installClaudeMd(targetDir, config.dryRun)
   installAgentsMd(targetDir, config.dryRun)
   installDocsStructure(targetDir, config.dryRun)
@@ -971,10 +983,9 @@ async function main() {
   console.log('  你在这里:  Step 1/2 完成 ✓')
   console.log('  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
   console.log('')
-  console.log('  刚才发生了什么:')
-  console.log('    ✓ 7 个 agent 定义 → .claude/agents/')
-  console.log('    ✓ 7 agent definitions → .claude/agents/')
-  console.log('    ✓ 14 skill definitions → .claude/skills/')
+  console.log('  Here is what happened:')
+  console.log(`    ✓ ${agentResult.installed + agentResult.updated} agents → .claude/agents/`)
+  console.log(`    ✓ ${skillResult.installed + skillResult.updated} skills → .claude/skills/`)
   console.log('    ✓ AGENTS.md / CLAUDE.md — harness pointer injected')
   console.log('    ✓ docs/ — skeleton directory created')
 
