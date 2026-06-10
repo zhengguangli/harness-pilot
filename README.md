@@ -53,22 +53,22 @@ orchestrator  →  architect  →  builder  →  reviewer  →  qa
 
 ### 14 Skills
 
-| Skill | Triggers | Purpose |
-|-------|----------|---------|
-| `harness-init` | "初始化 harness" | One-click full deployment |
-| `harness-orchestrator` | "运行 harness" | Coordinate all agents |
-| `context-setup` | "设置知识库" | AGENTS.md + docs/ architecture |
-| `architecture-guard` | "架构检查" | Layer linters + CI gates |
-| `quality-gate` | "质量审查" | Cross-boundary review + security scan |
-| `sandbox-exec` | "沙箱" | Isolated execution, git worktrees, browser |
-| `observability-setup` | "配置可观测性" | LogQL/PromQL + Chrome DevTools |
-| `entropy-gc` | "垃圾收集" | Drift detection + auto-refactor PRs |
-| `agent-readability` | "优化可读性" | Tacit knowledge audit |
-| `harness-evolve` | "改进 harness" | Feedback-driven evolution + A/B testing |
-| `hooks-framework` | "配置 hooks" | Ralph Loop, compaction, fault tolerance |
-| `web-search` | "搜索" | Real-time web search + page fetch |
-| `mcp-connector` | "MCP 集成" | Context7, GitHub API integration |
-| `tool-search` | "查找工具" | Dynamic tool discovery + lazy loading |
+| Skill | Triggers (EN / 中文) | Purpose |
+|-------|----------------------|---------|
+| `harness-init` | init harness / 初始化 harness | One-click full deployment |
+| `harness-orchestrator` | run harness / 运行 harness | Coordinate all agents |
+| `context-setup` | context setup / 设置知识库 | AGENTS.md + docs/ architecture |
+| `architecture-guard` | architecture guard / 架构检查 | Layer linters + CI gates |
+| `quality-gate` | quality gate / 质量审查 | Cross-boundary review + security scan |
+| `sandbox-exec` | sandbox / 沙箱 | Isolated execution, git worktrees, browser |
+| `observability-setup` | observability / 配置可观测性 | LogQL/PromQL + Chrome DevTools |
+| `entropy-gc` | entropy gc / 垃圾收集 | Drift detection + auto-refactor PRs |
+| `agent-readability` | agent readability / 优化可读性 | Tacit knowledge audit |
+| `harness-evolve` | evolve harness / 改进 harness | Feedback-driven evolution + A/B testing |
+| `hooks-framework` | config hooks / 配置 hooks | Ralph Loop, compaction, fault tolerance |
+| `web-search` | web search / 搜索 | Real-time web search + page fetch |
+| `mcp-connector` | mcp connect / MCP 集成 | Context7, GitHub API integration |
+| `tool-search` | tool search / 查找工具 | Dynamic tool discovery + lazy loading |
 
 ## How It Works
 
