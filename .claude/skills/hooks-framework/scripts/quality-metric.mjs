@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync, mkdirSync } from 'fs'
 import { join, extname } from 'path'
 import { execSync } from 'child_process'
+import { getWorkspaceDir } from '../../../../scripts/lib/workspace.mjs'
 
 function findSourceFiles(projectDir, exts) {
   const results = []
@@ -21,7 +22,7 @@ function findSourceFiles(projectDir, exts) {
 }
 
 export function qualityMetric(projectDir) {
-  const ws = join(projectDir, '.workspace')
+  const ws = getWorkspaceDir(projectDir)
   const metricsDir = join(ws, 'metrics')
   try { mkdirSync(metricsDir, { recursive: true }) } catch {}
 

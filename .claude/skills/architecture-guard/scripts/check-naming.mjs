@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from 'fs'
 import { join, extname, basename, relative } from 'path'
+import { getWorkspaceDir } from '../../../../scripts/lib/workspace.mjs'
 
 // 命名约定规则
 const RULES = {
@@ -42,7 +43,7 @@ function classifyFile(filePath) {
 
 function findFiles(dir, exts, maxDepth = 5) {
   const results = []
-  const skip = new Set(['node_modules', '.git', 'target', 'dist', 'build', '.next', '.workspace', '_workspace'])
+  const skip = new Set(['node_modules', '.git', 'target', 'dist', 'build', '.next', '.workspace', '_workspace', basename(getWorkspaceDir())])
   function walk(d, depth) {
     if (depth > maxDepth) return
     let entries

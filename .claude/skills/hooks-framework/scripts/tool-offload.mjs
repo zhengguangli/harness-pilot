@@ -1,12 +1,13 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { join, basename } from 'path'
+import { getWorkspaceDir } from '../../../../scripts/lib/workspace.mjs'
 
-const OFFLOAD_THRESHOLD = 2000 // 超过 2000 字符时卸载
-const HEAD_LINES = 20 // 保留头部行数
-const TAIL_LINES = 10 // 保留尾部行数
+const OFFLOAD_THRESHOLD = 2000
+const HEAD_LINES = 20
+const TAIL_LINES = 10
 
 export function toolOffload(projectDir, toolOutput, toolName = 'unknown') {
-  const ws = join(projectDir, '.workspace')
+  const ws = getWorkspaceDir(projectDir)
   const offloadDir = join(ws, 'offloaded')
   try { mkdirSync(offloadDir, { recursive: true }) } catch {}
 

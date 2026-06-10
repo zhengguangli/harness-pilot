@@ -57,8 +57,8 @@ scripts/ (execution layer: .mjs scripts, universal across all three tools)
 **Configuration parameters:**
 ```bash
 # Environment variables
-REF_TTL_MS=300000  # Reference expiry time (default 5 minutes)
-WORKSPACE_DIR=.workspace  # Workspace directory
+REF_TTL_MS=300000                # Reference expiry time (default 5 minutes)
+HARNESS_WORKSPACE=.workspace     # Workspace dir (default: {project}/.workspace)
 ```
 
 **@ref Marking Mechanism:**

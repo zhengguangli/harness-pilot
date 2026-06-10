@@ -1,9 +1,10 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync, mkdirSync, appendFileSync } from 'fs'
 import { join } from 'path'
 import { execSync } from 'child_process'
+import { getWorkspaceDir } from '../../../../scripts/lib/workspace.mjs'
 
 export function traceLog(projectDir) {
-  const ws = join(projectDir, '.workspace')
+  const ws = getWorkspaceDir(projectDir)
   const logDir = join(ws, 'trace')
   try { mkdirSync(logDir, { recursive: true }) } catch {}
 

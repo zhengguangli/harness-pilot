@@ -17,14 +17,14 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { getWorkspaceDir } from '../../../../scripts/lib/workspace.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// 工作区路径（可通过环境变量覆盖）
-const WORKSPACE_DIR = process.env.WORKSPACE_DIR || join(__dirname, '../../../../.workspace');
+const WORKSPACE_DIR = getWorkspaceDir();
 const REFS_FILE = join(WORKSPACE_DIR, 'file-refs.json');
-const UNLOADABLE_FILE = join(WORKSPACE_DIR, 'unloadable-files.json');
+
 
 // 文件引用过期时间（默认 5 分钟）
 const REF_TTL_MS = parseInt(process.env.REF_TTL_MS) || 5 * 60 * 1000;

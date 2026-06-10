@@ -1,9 +1,10 @@
 import { existsSync, readdirSync, readFileSync } from 'fs'
-import { join, extname, relative } from 'path'
+import { join, extname, relative, basename } from 'path'
+import { getWorkspaceDir } from '../../../../scripts/lib/workspace.mjs'
 
 function findFiles(dir, exts, maxDepth = 5) {
   const results = []
-  const skip = new Set(['node_modules', '.git', 'target', 'dist', 'build', '.next', '.workspace'])
+  const skip = new Set(['node_modules', '.git', 'target', 'dist', 'build', '.next', '.workspace', basename(getWorkspaceDir())])
   function walk(d, depth) {
     if (depth > maxDepth) return
     let entries

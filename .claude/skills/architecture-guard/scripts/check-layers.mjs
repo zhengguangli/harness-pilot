@@ -1,18 +1,16 @@
 import { existsSync, readdirSync, readFileSync } from 'fs'
-import { join, extname, relative } from 'path'
+import { join, extname, relative, basename } from 'path'
+import { getWorkspaceDir } from '../../../../scripts/lib/workspace.mjs'
 
-// 分层定义（依赖方向：上层可依赖下层，反之违规）
 const LAYERS = ['types', 'config', 'repo', 'service', 'runtime', 'ui', 'components', 'pages', 'app']
 
-function findFiles(dir, exts, maxDepth = 5) {
-  const results = []
-  const skip = new Set(['node_modules', '.git', 'target', 'dist', 'build', '.next', '.workspace'])
+const SKIP = new Set(['node_modules', '.git', 'target', 'dist', 'build', '.next', '.workspace', basename(getWorkspaceDir())])
   function walk(d, depth) {
     if (depth > maxDepth) return
     let entries
     try { entries = readdirSync(d, { withFileTypes: true }) } catch { return }
     for (const e of entries) {
-      if (skip.has(e.name)) continue
+      if (SKIP.has(e.name)) continue
       const full = join(d, e.name)
       if (e.isDirectory()) walk(full, depth + 1)
       else if (exts.has(extname(e.name))) results.push(full)

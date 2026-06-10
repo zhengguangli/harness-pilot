@@ -1,12 +1,13 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
+import { getWorkspaceDir } from '../../../../scripts/lib/workspace.mjs'
 
 function readFileSafe(path) {
   try { return readFileSync(path, 'utf-8') } catch { return '' }
 }
 
 export function compaction(projectDir) {
-  const ws = join(projectDir, '.workspace')
+  const ws = getWorkspaceDir(projectDir)
   try { mkdirSync(ws, { recursive: true }) } catch {}
 
   let fileCount = 0

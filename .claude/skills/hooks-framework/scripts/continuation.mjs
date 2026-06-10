@@ -1,8 +1,9 @@
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, mkdirSync, unlinkSync } from 'fs'
-import { join } from 'path'
+import { join, basename } from 'path'
+import { getWorkspaceDir } from '../../../../scripts/lib/workspace.mjs'
 
 export function continuation(projectDir) {
-  const ws = join(projectDir, '.workspace')
+  const ws = getWorkspaceDir(projectDir)
   if (!existsSync(ws)) return { exitCode: 0, message: '' }
 
   let interrupted = false
@@ -37,17 +38,18 @@ export function continuation(projectDir) {
 
   if (!interrupted) return { exitCode: 0, message: '' }
 
-  const currentTask = existsSync(taskFile) ? readFileSync(taskFile, 'utf-8') : '无任务记录'
+  const currentTask = existsSync(taskFile) ? readFileSync(taskFile, 'utf-8') : 'No task record'
   const progressFiles = readdirSync(ws).filter(f => f.startsWith('progress_') && f.endsWith('.md')).slice(0, 3)
-  const progressList = progressFiles.map(f => `- ${f}`).join('\n') || '无'
+  const progressList = progressFiles.map(f => `- ${f}`).join('\n') || 'None'
+  const wsName = basename(getWorkspaceDir(projectDir))
 
-  const prompt = `# 续行提示 (Ralph Loop)\n\n**检测到中断:** ${reason}\n\n## 原始任务\n\n${currentTask}\n\n## 已完成进度\n\n${progressList}\n\n## 续行指令\n\n1. 读取上述进度文件了解已完成的工作\n2. 从上次中断点继续执行\n3. 完成后更新 .workspace/current_task.md 的状态\n`
+  const prompt = `# Continuation Prompt (Ralph Loop)\n\n**Interruption detected:** ${reason}\n\n## Original Task\n\n${currentTask}\n\n## Completed Progress\n\n${progressList}\n\n## Continuation Instructions\n\n1. Read the progress files above to understand completed work\n2. Continue execution from the interruption point\n3. Update ${wsName}/current_task.md status upon completion\n`
 
   try { mkdirSync(join(ws, 'tool_output'), { recursive: true }) } catch {}
   writeFileSync(join(ws, 'continuation_prompt.md'), prompt)
   try { unlinkSync(flagFile) } catch {}
 
-  return { exitCode: 0, message: `[continuation] 已生成续行提示: ${reason}` }
+  return { exitCode: 0, message: `[continuation] Continuation prompt generated: ${reason}` }
 }
 
 if (process.argv[1]?.endsWith('continuation.mjs')) {
