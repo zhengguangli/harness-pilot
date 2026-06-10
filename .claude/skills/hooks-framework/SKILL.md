@@ -1,151 +1,184 @@
 ---
 name: hooks-framework
-description: Hooks/中间件框架。定义确定性执行钩子，包括压缩、续行、lint 检查。当用户说"配置 hooks"、"中间件"、"hooks framework"、"执行钩子"、"确定性检查"时触发。也用于修改已有 hook 配置。
+description: Hooks/middleware framework. Deterministic execution hooks: compaction, continuation, lint checks. Triggers on "配置 hooks", "中间件", "hooks framework", "执行钩子", "确定性检查", "hook".
 ---
 
-# Hooks Framework — 确定性执行钩子
+# Hooks Framework — Deterministic Execution Hooks
 
-## 核心理念
+## Core Philosophy
 
-**Harness 不仅是工具，还是确定性执行的保障。** Hooks 在 agent 执行周期的关键点注入确定性逻辑，弥补模型的不确定性。
+**Harness is not just a tool, but also a guarantee of deterministic execution.** Hooks inject deterministic logic at key points in the agent execution cycle, compensating for model non-determinism.
 
-## 架构
+## Architecture
 
 ```
-hooks.yaml（声明层：抽象事件名）
+hooks.yaml (declarative layer: abstract event names)
     ↓
-install.mjs（适配层：转译为各工具原生格式）
+install.mjs (adaptation layer: translate to each tool's native format)
     ↓
-├── .claude/settings.json    → Claude Code 原生 hooks
-├── .codex/hooks.json        → Codex 原生 hooks
-└── .opencode/plugins/       → OpenCode 原生插件
+├── .claude/settings.json    → Claude Code native hooks
+├── .codex/hooks.json        → Codex native hooks
+└── .opencode/plugins/       → OpenCode native plugins
 
-scripts/（执行层：.mjs 脚本，三工具通用）
+scripts/ (execution layer: .mjs scripts, universal across all three tools)
 ```
 
-## 核心机制
+## Core Mechanisms
 
-### Tool Offload（工具调用卸载）
+### Tool Offload
 
-**问题：** 大型工具输出（如测试结果、日志、文件列表）会快速填满上下文窗口，导致上下文腐烂。
+**Problem:** Large tool outputs (e.g. test results, logs, file lists) quickly fill the context window, causing context rot.
 
-**解决方案：** 当工具输出超过阈值（默认 2000 字符）时，自动卸载到文件系统，只保留首尾引用。
+**Solution:** When tool output exceeds the threshold (default 2000 characters), automatically offload to filesystem, retaining only head/tail references.
 
-**工作原理：**
-1. 检测工具输出大小
-2. 超过阈值 → 完整内容写入 `.workspace/offloaded/`
-3. 返回摘要：首 20 行 + 尾 10 行 + 文件路径引用
-4. 模型可通过 `cat` 命令查看完整内容
+**How it works:**
+1. Detect tool output size
+2. Exceeds threshold → write full content to `.workspace/offloaded/`
+3. Return summary: first 20 lines + last 10 lines + file path reference
+4. Model can view full content via `cat` command
 
-**优势：**
-- 保护上下文窗口不被大型输出污染
-- 保留完整信息的可访问性
-- 支持渐进式披露：按需查看完整内容
+**Advantages:**
+- Protects context window from being polluted by large outputs
+- Preserves accessibility of full information
+- Supports progressive disclosure: view full content on demand
 
-### Apply Patch（代码编辑工具）
+### Context Cleanup (File Reference Tracking & Auto Offload)
 
-**问题：** 模型需要用精确、可控的方式编辑文件，而非重写整个文件或使用不稳定的搜索替换。
+**Problem:** File content read by the agent stays in context indefinitely, consuming precious context window even when no longer needed.
 
-**原理：** 基于 OpenAI Codex 的 `apply_patch` 工具标准实现，模型针对 unified diff 格式进行了后训练。
+**Solution:** Track file references, automatically identify offloadable files based on TTL, and provide cleanup suggestions during compaction.
 
-**工具 Schema：**
+**How it works:**
+1. **Reference Tracking**: `on_tool_output` hook automatically records read files
+2. **TTL Detection**: Files unreferenced for more than 5 minutes are marked as offloadable
+3. **Cleanup Suggestions**: `on_turn_end` hook generates a list of offloadable files
+4. **Compaction Integration**: Automatically removes offloadable file content during compaction
+
+**Configuration parameters:**
+```bash
+# Environment variables
+REF_TTL_MS=300000  # Reference expiry time (default 5 minutes)
+WORKSPACE_DIR=.workspace  # Workspace directory
+```
+
+**@ref Marking Mechanism:**
+```markdown
+# AGENTS.md
+Architecture details → @ref:docs/ARCHITECTURE.md
+```
+- Automatically tracked when agent reads files
+- Use `@ref:` markers to explicitly declare references
+- Automatically marked as offloadable when reference expires
+
+**Advantages:**
+- Automatically frees context space no longer needed
+- Seamlessly integrates with compaction
+- Reduces Context Rot risk
+
+### Apply Patch (Code Editing Tool)
+
+**Problem:** Models need to edit files in a precise, controllable way, rather than rewriting entire files or using unstable search-and-replace.
+
+**Principle:** Based on OpenAI Codex's `apply_patch` tool standard implementation; models are post-trained on unified diff format.
+
+**Tool Schema:**
 
 ```json
 {
   "type": "apply_patch",
-  "path": "文件路径",
-  "diff": "unified diff 格式的补丁内容"
+  "path": "file path",
+  "diff": "patch content in unified diff format"
 }
 ```
 
-**与 hooks 集成：**
-- `on_file_edit` 钩子自动触发 `apply-patch.mjs` 验证补丁格式
-- 补丁应用前检查：文件存在性、行号偏移容差、冲突检测
-- 应用失败时返回具体错误行号和建议修复方案
-- 支持生成 `.workspace/patches/` 记录所有补丁历史，用于回滚
+**Integration with hooks:**
+- `on_file_edit` hook automatically triggers `apply-patch.mjs` to validate patch format
+- Pre-application checks: file existence, line offset tolerance, conflict detection
+- On failure, returns specific error line numbers and suggested fixes
+- Supports generating `.workspace/patches/` to record all patch history for rollback
 
-**最佳实践（来自 OpenAI Codex Prompting Guide）：**
-- 单文件编辑优先使用 apply_patch
-- 自动生成的变更（如 `package.json`、`gofmt` 输出）不使用 apply_patch
-- 跨文件批量搜索替换时使用脚本方式更高效
-- 补丁格式必须为 unified diff（`@@ -line,count +line,count @@`）
+**Best Practices (from OpenAI Codex Prompting Guide):**
+- Prefer apply_patch for single-file edits
+- Do not use apply_patch for auto-generated changes (e.g. `package.json`, `gofmt` output)
+- Use scripting approach for cross-file batch search-and-replace for better efficiency
+- Patch format must be unified diff (`@@ -line,count +line,count @@`)
 
-### Fault Tolerance（容错模式）
+### Fault Tolerance
 
-**问题：** 长时间运行的 agent 任务会遇到各种瞬时故障——网络抖动、API 限流、沙箱超时——缺乏容错机制会导致整个任务失败。
+**Problem:** Long-running agent tasks encounter various transient failures—network jitter, API rate limiting, sandbox timeouts—and lack of fault tolerance mechanisms leads to entire task failure.
 
-**解决方案：** 三层容错架构。
+**Solution:** Three-layer fault tolerance architecture.
 
-**第一层：操作级重试（Retry）**
+**Layer 1: Operation-Level Retry**
 
-指数退避策略，适用于工具调用、API 请求、文件操作：
+Exponential backoff strategy, applicable to tool calls, API requests, file operations:
 
 ```
-失败次数  等待时间  操作
-第 1 次   1s      重试
-第 2 次   2s      重试
-第 3 次   4s      重试
-第 4 次   -       放弃，记录错误
+Failure count   Wait time   Action
+1st             1s          Retry
+2nd             2s          Retry
+3rd             4s          Retry
+4th             -           Give up, log error
 ```
 
-**第二层：超时控制（Timeout）**
+**Layer 2: Timeout Control**
 
-| 操作类型 | 默认超时 | 超时行为 |
+| Operation Type | Default Timeout | Timeout Behavior |
 |----------|----------|----------|
-| Shell 命令 | 120s | 终止进程，返回部分输出 |
-| API 调用 | 60s | 重试一次 |
-| 文件操作 | 30s | 报错退出 |
-| 沙箱创建 | 120s | 重建一次 |
+| Shell Command | 120s | Terminate process, return partial output |
+| API Call | 60s | Retry once |
+| File Operation | 30s | Error and exit |
+| Sandbox Creation | 120s | Rebuild once |
 
-**第三层：熔断器（Circuit Breaker）**
+**Layer 3: Circuit Breaker**
 
-同一操作类型在 5 分钟内失败 >= 5 次时触发：
-1. 暂停该操作类型 10 分钟
-2. 通知 orchestrator 切换到替代工具
-3. 记录熔断事件到 `.workspace/metrics/circuit-breaker.log`
-4. 10 分钟后自动半开探测，成功则恢复
+Triggered when the same operation type fails >= 5 times within 5 minutes:
+1. Pause that operation type for 10 minutes
+2. Notify orchestrator to switch to alternative tool
+3. Record circuit breaker event to `.workspace/metrics/circuit-breaker.log`
+4. After 10 minutes, auto half-open probe; restore on success
 
-**Hooks 集成：**
-- `on_tool_output` 钩子检测工具返回的错误码
-- `retry-timeout.mjs` 管理重试计数器和超时逻辑
-- 熔断状态持久化到 `.workspace/metrics/`，跨 session 保持
+**Hooks Integration:**
+- `on_tool_output` hook detects error codes returned by tools
+- `retry-timeout.mjs` manages retry counters and timeout logic
+- Circuit breaker state persisted to `.workspace/metrics/`, maintained across sessions
 
-### API-Native Compaction vs 脚本 Compaction
+### API-Native Compaction vs Script Compaction
 
-**两种策略对比：**
+**Comparison of two strategies:**
 
-| 维度 | API-Native Compaction | 脚本 Compaction |
+| Dimension | API-Native Compaction | Script Compaction |
 |------|----------------------|-----------------|
-| 实现方式 | 调用 API 内置 `/compact` 端点 | `compaction.mjs` 脚本触发 `PreCompact` 钩子 |
-| 效率 | API 与模型协同压缩，高保真 | 独立摘要，可能丢失关键上下文 |
-| 兼容性 | 仅特定 API 支持（OpenAI Responses API / Claude） | 所有模型通用 |
-| 标记 | `encrypted_content`（ZDR 兼容） | 文件系统摘要文件 |
-| 推荐场景 | 优先使用（如果 API 支持） | 回退方案（API 不支持时） |
+| Implementation | Calls API built-in `/compact` endpoint | `compaction.mjs` script triggers `PreCompact` hook |
+| Efficiency | API co-compresses with model, high fidelity | Independent summarization, may lose key context |
+| Compatibility | Only specific APIs (OpenAI Responses API / Claude) | Universal across all models |
+| Marking | `encrypted_content` (ZDR compatible) | Filesystem summary file |
+| Recommended Scenario | Preferred (if API supports it) | Fallback (when API does not support it) |
 
-**自动选择逻辑：**
+**Auto-selection logic:**
 ```
-检测 API 是否支持原生 compaction
-  ├─ 支持 → 配置 on_compact 钩子为空（让 API 处理）
-  └─ 不支持 → 使用 compaction.mjs 脚本方案
+Check if API supports native compaction
+  ├─ Supported → Configure on_compact hook as empty (let API handle it)
+  └─ Not supported → Use compaction.mjs script approach
 ```
 
-当前默认使用脚本方案以保证跨平台兼容性。在支持原生 compaction 的 API（如 OpenAI Responses API 的 `/compact` 端点或 Claude 的内置摘要）上运行时，建议禁用脚本 compaction 以避免双重压缩。
+Currently defaults to script approach for cross-platform compatibility. When running on APIs that support native compaction (e.g. OpenAI Responses API's `/compact` endpoint or Claude's built-in summarization), it is recommended to disable script compaction to avoid double compression.
 
-### Prompt Caching 指导
+### Prompt Caching Guidance
 
-**核心认知：** Prompt caching 是降低 token 消耗和延迟的最大单一优化杠杆，可节省 50-90% 的重复上下文成本。
+**Core Insight:** Prompt caching is the single largest optimization lever for reducing token consumption and latency, saving 50-90% of repeated context costs.
 
-**适用场景：**
-- 所有 agent 的 system prompt（变化频率最低）
-- AGENTS.md 注入内容（跨 session 不变）
-- 重复使用的工具定义 Schema
-- 长对话中不可变的历史消息段
+**Applicable Scenarios:**
+- System prompts for all agents (lowest change frequency)
+- AGENTS.md injected content (unchanged across sessions)
+- Repeatedly used tool definition schemas
+- Immutable historical message segments in long conversations
 
-**Hooks 集成：** `on_session_start` 钩子自动将 AGENTS.md 等静态内容标记为可缓存前缀，由 API 自动管理缓存命中。
+**Hooks Integration:** The `on_session_start` hook automatically marks static content like AGENTS.md as cacheable prefixes, with cache hits automatically managed by the API.
 
-## 抽象事件映射
+## Abstract Event Mapping
 
-| 抽象事件 | Claude Code | Codex | OpenCode |
+| Abstract Event | Claude Code | Codex | OpenCode |
 |----------|-------------|-------|----------|
 | `on_session_start` | `SessionStart` | `SessionStart` | `session.created` |
 | `on_file_edit` | `PostToolUse(Edit\|Write)` | `PostToolUse(Edit\|Write)` | `file.edited` |
@@ -155,83 +188,86 @@ scripts/（执行层：.mjs 脚本，三工具通用）
 | `on_turn_end` | `Stop` | `Stop` | `session.idle` |
 | `on_error` | `PostToolUse(*, error)` | `PostToolUse(*, error)` | `tool.executed(error)` |
 
-## 可运行脚本
+## Runnable Scripts
 
 ```
 .claude/skills/hooks-framework/
 ├── SKILL.md
-├── hooks.yaml               ← 统一配置
-├── opencode-plugin.ts        ← OpenCode 插件模板
+├── hooks.yaml               ← Unified configuration
+├── opencode-plugin.ts       ← OpenCode plugin template
 └── scripts/
-    ├── context-check.mjs     ← AGENTS.md 新鲜度检查
-    ├── env-verify.mjs        ← 环境就绪检查
-    ├── lint-check.mjs        ← 架构边界检查
-    ├── test-run.mjs          ← 测试套件
-    ├── continuation.mjs      ← Ralph Loop 续行检测
-    ├── compaction.mjs        ← 上下文压缩
-    ├── tool-offload.mjs      ← 工具输出卸载
-    ├── apply-patch.mjs       ← Apply Patch 补丁验证与应用
-    ├── retry-timeout.mjs     ← 容错：重试计数 + 超时 + 熔断
-    ├── trace-log.mjs         ← 执行日志
-    └── quality-metric.mjs    ← 质量指标
+    ├── context-check.mjs     ← AGENTS.md freshness check
+    ├── env-verify.mjs        ← Environment readiness check
+    ├── lint-check.mjs        ← Architecture boundary check
+    ├── test-run.mjs          ← Test suite execution
+    ├── continuation.mjs      ← Ralph Loop continuation detection
+    ├── compaction.mjs        ← Context compaction
+    ├── tool-offload.mjs      ← Tool output offloading
+    ├── context-cleanup.mjs   ← File reference tracking & auto offload
+    ├── apply-patch.mjs       ← Apply Patch: patch validation & application
+    ├── retry-timeout.mjs     ← Fault tolerance: retry count + timeout + circuit breaker
+    ├── trace-log.mjs         ← Execution logging
+    └── quality-metric.mjs    ← Quality metrics
 ```
 
-### 脚本双模式
+### Script Dual-Mode
 
-每个 .mjs 支持两种调用方式：
+Each .mjs supports two invocation modes:
 
-**CLI 模式**（Claude Code / Codex hooks 调用）：
+**CLI Mode** (Claude Code / Codex hooks invocation):
 ```bash
 node scripts/context-check.mjs
 # stdin JSON + exit code + stdout
 ```
 
-**Import 模式**（OpenCode 插件调用）：
+**Import Mode** (OpenCode plugin invocation):
 ```typescript
 import { contextCheck } from './scripts/context-check.mjs'
 const result = contextCheck(projectDir)
 ```
 
-## 快速开始
+## Quick Start
 
-### 手动运行
+### Manual Execution
 
 ```bash
 node .claude/skills/hooks-framework/scripts/context-check.mjs
 node .claude/skills/hooks-framework/scripts/lint-check.mjs
-# 工具输出卸载（JSON 输入）
-echo '{"tool_output":"大型输出内容...","tool_name":"test"}' | node .claude/skills/hooks-framework/scripts/tool-offload.mjs
+# Tool output offloading (JSON input)
+echo '{"tool_output":"Large output content...","tool_name":"test"}' | node .claude/skills/hooks-framework/scripts/tool-offload.mjs
 ```
 
-### install.mjs 自动生成
+### install.mjs Auto-Generation
 
 ```bash
 # Claude Code
-node scripts/install.mjs --tool claude   → 生成 .claude/settings.json hooks
+node scripts/install.mjs --tool claude   → Generate .claude/settings.json hooks
 
 # Codex
-node scripts/install.mjs --tool codex    → 生成 .codex/hooks.json
+node scripts/install.mjs --tool codex    → Generate .codex/hooks.json
 
 # OpenCode
-node scripts/install.mjs --tool opencode → 生成 .opencode/plugins/harness-hooks.ts
+node scripts/install.mjs --tool opencode → Generate .opencode/plugins/harness-hooks.ts
 
-# 全部
-node scripts/install.mjs --tool all      → 三个都生成
+# All
+node scripts/install.mjs --tool all      → Generate all three
 ```
 
-## 输入/输出
+## Input/Output
 
-**输出目录：**
-- `.workspace/trace/` — 执行日志
-- `.workspace/metrics/` — 质量指标
-- `.workspace/context_summary.md` — 压缩摘要
-- `.workspace/continuation_prompt.md` — 续行提示
-- `.workspace/offloaded/` — 卸载的工具输出（首尾引用 + 完整内容）
+**Output Directories:**
+- `.workspace/trace/` — Execution logs
+- `.workspace/metrics/` — Quality metrics
+- `.workspace/context_summary.md` — Compaction summary
+- `.workspace/continuation_prompt.md` — Continuation prompt
+- `.workspace/offloaded/` — Offloaded tool outputs (head/tail references + full content)
+- `.workspace/file-refs.json` — File reference tracking records
+- `.workspace/unloadable-files.json` — List of offloadable files
 
-## 质量标准
+## Quality Standards
 
-- 每个脚本可独立运行和测试
-- 脚本无外部依赖（Node.js 内置模块）
-- 三平台通用（macOS / Linux / Windows）
-- 所有脚本支持 CLI 和 import 双模式
-- Tool Offload 阈值可配置（默认 2000 字符）
+- Each script can be independently run and tested
+- Scripts have no external dependencies (Node.js built-in modules only)
+- Universal across three platforms (macOS / Linux / Windows)
+- All scripts support both CLI and import dual-mode
+- Tool Offload threshold is configurable (default 2000 characters)

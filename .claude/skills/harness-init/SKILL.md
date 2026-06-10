@@ -1,117 +1,117 @@
 ---
 name: harness-init
-description: 为项目初始化完整的 Harness Engineering 体系。一键生成 agents、skills、知识库架构、CLAUDE.md。当用户说"初始化 harness"、"配置 agent 团队"、"搭建 harness"、"harness init"、"部署 harness"时必须触发。适用于全新项目从零开始的场景。
+description: Initialize Harness Engineering from scratch. One-click gen of agents, skills, knowledge architecture, CLAUDE.md. MUST trigger on "初始化 harness", "配置 agent 团队", "搭建 harness", "harness init", "部署 harness". For updates use harness-orchestrator.
 ---
 
-# Harness Init — 一键初始化 Harness 工程体系
+# Harness Init — One-Click Initialize Harness Engineering System
 
-## 核心理念
+## Core Philosophy
 
-**一键部署，零摩擦启动。** Harness Engineering 体系应像 `npm install` 一样简单——一条命令完成 agents、skills、知识库的完整部署。增量注入不覆盖已有内容，确保与现有项目无缝集成。
+**One-click deployment, zero-friction startup.** The Harness Engineering system should be as simple as `npm install`—complete deployment of agents, skills, and knowledge base with a single command. Incremental injection without overwriting existing content ensures seamless integration with existing projects.
 
-## 触发条件
+## Trigger Conditions
 
-用户要求为项目配置完整的 agent 团队和 harness 体系时触发。
+Triggered when the user requests configuring a complete agent team and harness system for the project.
 
-## 执行流程
+## Execution Flow
 
-### Phase 1: 项目探测
+### Phase 1: Project Discovery
 
-1. 扫描项目根目录，识别技术栈（package.json / Cargo.toml / go.mod / pyproject.toml 等）
-2. 识别现有目录结构和代码组织方式
-3. 检测目标 AI 工具（claude-code / codex / opencode）
-4. 检查是否已存在 `.claude/` 目录（避免覆盖）
+1. Scan project root, identify tech stack (package.json / Cargo.toml / go.mod / pyproject.toml etc.)
+2. Identify existing directory structure and code organization
+3. Detect target AI tools (claude-code / codex / opencode)
+4. Check if `.claude/` directory already exists (avoid overwriting)
 
-### Phase 2: 架构设计
+### Phase 2: Architecture Design
 
-调用 `architect` agent：
+Invoke `architect` agent:
 
-1. 根据技术栈设计分层架构规则
-2. 定义品味不变量（命名、日志、文件大小、类型安全）
-3. 生成 `docs/ARCHITECTURE.md`
-4. 生成 linter 规则配置
+1. Design layered architecture rules based on tech stack
+2. Define taste invariants (naming, logging, file size, type safety)
+3. Generate `docs/ARCHITECTURE.md`
+4. Generate linter rule configuration
 
-### Phase 3: 知识库搭建
+### Phase 3: Knowledge Base Construction
 
-调用 `context-engineer` agent：
+Invoke `context-engineer` agent:
 
-1. 生成 `AGENTS.md`（目录式，~100行）
-2. 创建 `docs/` 目录结构
-3. 生成各领域文档骨架（DESIGN.md, SECURITY.md, RELIABILITY.md 等）
-4. 配置知识新鲜度检查
+1. Generate `AGENTS.md` (table-of-contents style, ~100 lines)
+2. Create `docs/` directory structure
+3. Generate skeleton docs for each domain (DESIGN.md, SECURITY.md, RELIABILITY.md etc.)
+4. Configure knowledge freshness checks
 
-### Phase 4: 技能生成
+### Phase 4: Skill Generation
 
-调用 `builder` agent：
+Invoke `builder` agent:
 
-根据项目需求从以下标准技能包中选择并定制：
+Select and customize from the following standard skill packages based on project needs:
 
-| 技能 | 用途 | 必选 |
+| Skill | Purpose | Required |
 |------|------|------|
-| context-setup | 知识库架构管理 | ✅ |
-| architecture-guard | 架构边界强制执行 | ✅ |
-| entropy-gc | 漂移检测与垃圾收集 | ✅ |
-| observability-setup | 可观测性堆栈配置 | 可选 |
-| sandbox-exec | 安全代码执行 | 可选 |
-| quality-gate | 质量审查门禁 | ✅ |
-| agent-readability | 智能体可读性优化 | 可选 |
-| harness-evolve | 反馈驱动演进 | ✅ |
-| hooks-framework | 确定性执行钩子 | ✅ |
+| context-setup | Knowledge base architecture management | ✅ |
+| architecture-guard | Architecture boundary enforcement | ✅ |
+| entropy-gc | Drift detection & garbage collection | ✅ |
+| observability-setup | Observability stack configuration | Optional |
+| sandbox-exec | Secure code execution | Optional |
+| quality-gate | Quality review gate | ✅ |
+| agent-readability | Agent readability optimization | Optional |
+| harness-evolve | Feedback-driven evolution | ✅ |
+| hooks-framework | Deterministic execution hooks | ✅ |
 
-### Phase 5: Hooks 配置
+### Phase 5: Hooks Configuration
 
-基于 `.claude/skills/hooks-framework/hooks.yaml` 模板，生成项目定制的 hooks 配置：
+Based on `.claude/skills/hooks-framework/hooks.yaml` template, generate project-customized hooks configuration:
 
-1. 复制 `hooks.yaml` 到项目根目录
-2. 根据项目技术栈调整 `lint-check.mjs` 中的检查规则
-3. 根据项目测试框架调整 `test-run.mjs` 中的测试命令
-4. 配置 CI 集成（`.github/workflows/harness-hooks.yml`）
+1. Copy `hooks.yaml` to project root
+2. Adjust check rules in `lint-check.mjs` based on project tech stack
+3. Adjust test commands in `test-run.mjs` based on project test framework
+4. Configure CI integration (`.github/workflows/harness-hooks.yml`)
 
-**hooks.yaml 核心配置：**
+**hooks.yaml Core Configuration:**
 
 ```yaml
 hooks:
   pre_execution:
-    - name: context-check    # 检查 AGENTS.md 新鲜度
-    - name: env-verify       # 验证环境就绪
+    - name: context-check    # Check AGENTS.md freshness
+    - name: env-verify       # Verify environment readiness
   post_execution:
-    - name: lint-check       # 架构边界检查
-    - name: test-run         # 运行测试
+    - name: lint-check       # Architecture boundary check
+    - name: test-run         # Run tests
   interception:
-    - name: continuation     # Ralph Loop 续行
-    - name: compaction       # 上下文压缩
+    - name: continuation     # Ralph Loop continuation
+    - name: compaction       # Context compaction
   observation:
-    - name: trace-log        # 执行日志
-    - name: quality-metric   # 质量指标
+    - name: trace-log        # Execution logging
+    - name: quality-metric   # Quality metrics
 ```
 
-### Phase 6: 质量审查
+### Phase 6: Quality Review
 
-调用 `reviewer` agent：
+Invoke `reviewer` agent:
 
-1. 检查所有 agent 定义完整性
-2. 检查所有 skill frontmatter
-3. 检查 CLAUDE.md 指针正确性
-4. 检查知识库交叉引用
+1. Check all agent definition completeness
+2. Check all skill frontmatter
+3. Check CLAUDE.md pointer correctness
+4. Check knowledge base cross-references
 
-### Phase 7: 验证
+### Phase 7: Verification
 
-调用 `qa` agent：
+Invoke `qa` agent:
 
-1. 结构验证：文件位置、格式、引用
-2. 触发验证：每个 skill 的 should-trigger + should-NOT-trigger
-3. 干跑验证：orchestrator 阶段序列逻辑性
+1. Structural verification: file locations, formats, references
+2. Trigger verification: each skill's should-trigger + should-NOT-trigger
+3. Dry-run verification: orchestrator phase sequence logicality
 
-### Phase 8: 注册 CLAUDE.md
+### Phase 8: Register CLAUDE.md
 
-在项目根目录生成 CLAUDE.md，注册 harness 指针：
+Generate CLAUDE.md at project root, register harness pointer:
 
 ```markdown
-## Harness: {项目名}
+## Harness: {Project Name}
 
-**Goal:** {一句话描述}
+**Goal:** {One-sentence description}
 
-**Trigger:** 工作请求涉及 {领域} 时，使用对应 skill。简单问题直接回答。
+**Trigger:** When work requests involve {domains}, use corresponding skills. Answer simple questions directly.
 
 **Change History:**
 | Date | Change | Target | Reason |
@@ -119,18 +119,18 @@ hooks:
 | {YYYY-MM-DD} | Initial configuration | All | - |
 ```
 
-## 输出清单
+## Output Checklist
 
-- [ ] `.claude/agents/` — 7 个 agent 定义文件
-- [ ] `.claude/skills/` — 标准技能包
-- [ ] `CLAUDE.md` — harness 指针
-- [ ] `docs/` — 知识库目录结构及骨架文档
-- [ ] `docs/ARCHITECTURE.md` — 架构地图
-- [ ] `hooks.yaml` — 项目定制的执行钩子配置
-- [ ] `.github/workflows/harness-hooks.yml` — CI hooks 集成
-- [ ] `.github/workflows/doc-gardening.yml` — 文档新鲜度检查
+- [ ] `.claude/agents/` — 7 agent definition files
+- [ ] `.claude/skills/` — Standard skill packages
+- [ ] `CLAUDE.md` — Harness pointer
+- [ ] `docs/` — Knowledge base directory structure and skeleton docs
+- [ ] `docs/ARCHITECTURE.md` — Architecture map
+- [ ] `hooks.yaml` — Project-customized execution hook configuration
+- [ ] `.github/workflows/harness-hooks.yml` — CI hooks integration
+- [ ] `.github/workflows/doc-gardening.yml` — Documentation freshness check
 
-## 参考资料
+## References
 
-- 架构设计：`references/architecture-template.md`
-- 知识库模板：`references/docs-template.md`
+- Architecture design: `references/architecture-template.md`
+- Knowledge base templates: `references/docs-template.md`

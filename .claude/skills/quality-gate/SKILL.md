@@ -1,167 +1,167 @@
 ---
 name: quality-gate
-description: 质量审查门禁。执行代码审查、架构合规检查、品味校验、测试验证。当用户说"质量审查"、"代码审查"、"quality gate"、"审查门禁"、"质量检查"时触发。也用于对特定 PR 或变更进行质量评估。
+description: Quality review gate. Code review, architecture compliance, taste validation, test verification. Triggers on "质量审查", "代码审查", "quality gate", "审查门禁", "质量检查", "审核".
 ---
 
-# Quality Gate — 质量审查门禁
+# Quality Gate
 
-## 核心理念
+## Core Philosophy
 
-**品味是可编码的。** 将主观偏好转化为可机械检查的规则。审查反馈应包含具体修复指令，而非模糊建议。
+**Taste is encodable.** Transform subjective preferences into mechanically checkable rules. Review feedback must include specific fix instructions, not vague suggestions.
 
-## 执行流程
+## Execution Flow
 
-### Step 1: 加载审查标准
+### Step 1: Load review standards
 
-从以下来源加载：
-- `docs/ARCHITECTURE.md` — 架构约束
-- `docs/QUALITY_SCORE.md` — 品味不变量
-- `docs/SECURITY.md` — 安全要求
-- `docs/DESIGN.md` — 设计规范
+Load from these sources:
+- `docs/ARCHITECTURE.md` — Architecture constraints
+- `docs/QUALITY_SCORE.md` — Taste invariants
+- `docs/SECURITY.md` — Security requirements
+- `docs/DESIGN.md` — Design specifications
 
-### Step 2: 架构合规审查
+### Step 2: Architecture compliance review
 
-| 检查项 | 方法 |
+| Check | Method |
 |--------|------|
-| 依赖方向 | 静态分析 import/require 语句 |
-| 层次边界 | 目录结构与架构定义对比 |
-| Provider 接口 | 横切关注点的入口检查 |
-| 循环依赖 | 依赖图分析 |
+| Dependency direction | Static analysis of import/require statements |
+| Layer boundaries | Compare directory structure with architecture definition |
+| Provider interfaces | Entry point checks for cross-cutting concerns |
+| Circular dependencies | Dependency graph analysis |
 
-### Step 3: 品味校验
+### Step 3: Taste validation
 
-| 维度 | 检查内容 |
+| Dimension | Check Content |
 |------|----------|
-| 命名 | 变量/函数/文件命名是否符合约定 |
-| 日志 | 是否使用结构化日志 |
-| 类型 | any 类型、类型断言、类型安全 |
-| 大小 | 文件/函数是否过长 |
-| 重复 | 是否有可提取为共享工具的重复代码 |
+| Naming | Do variable/function/file names follow conventions |
+| Logging | Is structured logging used |
+| Types | any types, type assertions, type safety |
+| Size | Are files/functions too long |
+| Duplication | Is there duplicate code that could be extracted as shared utilities |
 
-### Step 3.5: 语言适配检查强度
+### Step 3.5: Language-adapted check intensity
 
-根据项目技术栈调整检查强度。**Parse, Don't Validate** 在不同语言中的实现方式不同：
+Adjust check intensity based on project tech stack. **Parse, Don't Validate** is implemented differently across languages:
 
-| 语言 | 类型安全 | Parse, Don't Validate 实现 | 检查重点 |
+| Language | Type Safety | Parse, Don't Validate Implementation | Check Focus |
 |------|----------|---------------------------|----------|
-| TypeScript | 强 | Zod/Valibot 运行时验证 + 类型推断 | 避免 `any`、类型断言、`as` 强转 |
-| Rust | 强 | 编译期检查 + Result 错误处理 | 避免 `unwrap()`、`panic!`、`unsafe` |
-| Go | 中 | 显式错误处理 + 接口约束 | 避免 `interface{}`、忽略 error |
-| Python | 弱 | Pydantic/dataclasses + 类型注解 | 使用 type hints、避免 dict 直传 |
-| JavaScript | 弱 | 运行时验证库 + JSDoc | 使用 TypeScript 或 Zod |
+| TypeScript | Strong | Zod/Valibot runtime validation + type inference | Avoid `any`, type assertions, `as` casts |
+| Rust | Strong | Compile-time checks + Result error handling | Avoid `unwrap()`, `panic!`, `unsafe` |
+| Go | Medium | Explicit error handling + interface constraints | Avoid `interface{}`, ignoring errors |
+| Python | Weak | Pydantic/dataclasses + type annotations | Use type hints, avoid passing dicts directly |
+| JavaScript | Weak | Runtime validation libraries + JSDoc | Use TypeScript or Zod |
 
-**动态语言加强检查：**
+**Strengthen checks for dynamic languages:**
 
 ```
-Python/JS/Ruby 项目 → 提高以下检查权重：
-- 运行时验证（Pydantic/Zod/Joi）
-- 类型注解覆盖率
-- 边界处的数据解析
-- 隐式类型转换
+For Python/JS/Ruby projects → Increase weight of the following checks:
+- Runtime validation (Pydantic/Zod/Joi)
+- Type annotation coverage
+- Data parsing at boundaries
+- Implicit type conversions
 
-静态语言（TS/Rust/Go）→ 标准检查即可
+For static languages (TS/Rust/Go) → Standard checks are sufficient
 ```
 
-### Step 4: 安全审查
+### Step 4: Security review
 
-| 检查项 | 严重程度 |
+| Check | Severity |
 |--------|----------|
-| 输入验证 | 高 |
-| SQL 注入 | 严重 |
-| XSS | 高 |
-| 敏感信息泄露 | 严重 |
-| 依赖漏洞 | 中-高 |
+| Input validation | High |
+| SQL injection | Critical |
+| XSS | High |
+| Sensitive info leakage | Critical |
+| Dependency vulnerabilities | Medium-High |
 
-### Step 5: 智能体可读性审查
+### Step 5: Agent readability review
 
-检查未来 AI 智能体能否直接从代码推理业务域：
+Check whether future AI agents can reason about the business domain directly from the code:
 
-- 代码是否有足够的上下文信息
-- 命名是否自解释
-- 是否有隐式依赖（依赖人类记忆而非代码文档）
-- 外部知识是否已编码到仓库
+- Does the code have sufficient context information
+- Are names self-explanatory
+- Are there implicit dependencies (relying on human memory rather than code documentation)
+- Has external knowledge been encoded into the repo
 
-### Step 6: 生成审查报告
+### Step 6: Generate review report
 
 ```markdown
 ## Quality Gate Report
 
-**总体评估:** {通过/拒绝/有条件通过}
+**Overall Assessment:** {Pass/Fail/Conditional Pass}
 
-### 架构合规: {✅/❌}
-- {检查结果}
+### Architecture Compliance: {✅/❌}
+- {Results}
 
-### 品味校验: {✅/❌}
-- {检查结果}
+### Taste Validation: {✅/❌}
+- {Results}
 
-### 安全审查: {✅/❌}
-- {检查结果}
+### Security Review: {✅/❌}
+- {Results}
 
-### 智能体可读性: {✅/❌}
-- {检查结果}
+### Agent Readability: {✅/❌}
+- {Results}
 
-### 修复指令
-1. {文件路径}:{行号} — {具体修复操作}
+### Fix Instructions
+1. {file path}:{line number} — {specific fix action}
 2. ...
 ```
 
-## 输入/输出协议
+## Input/Output Protocol
 
-**输入：**
-- 待审查的代码变更（diff 或完整文件）
-- 审查标准文档
+**Input:**
+- Code changes to review (diff or full files)
+- Review standard documents
 
-**输出：**
-- 审查报告
-- 通过/拒绝决策
-- 具体修复指令列表
+**Output:**
+- Review report
+- Pass/fail decision
+- List of specific fix instructions
 
-## 质量标准
+## Quality Standards
 
-- 每条审查意见附带具体修复指令
-- 拒绝时必须说明原因和修复路径
-- 审查报告可在 1 分钟内理解
+- Each review comment comes with a specific fix instruction
+- Rejection must explain the reason and the fix path
+- Review report should be understandable within 1 minute
 
-## 自动化验证
+## Automated Verification
 
-### 验证脚本
+### Verification Script
 
-使用 `harness-verify.mjs` 进行跨平台自动化质量检查：
+Use `harness-verify.mjs` for cross-platform automated quality checks:
 
 ```bash
-# 在目标项目中运行
+# Run in the target project
 cd /path/to/your/project
 node /path/to/harness-polit/.claude/skills/quality-gate/harness-verify.mjs
 
-# 或者指定目标目录
+# Or specify a target directory
 node harness-verify.mjs /path/to/your/project
 ```
 
-**跨平台支持：** macOS / Linux / Windows（无需 bash）
+**Cross-platform support:** macOS / Linux / Windows (no bash required)
 
-### 验证清单
+### Verification Checklist
 
-详见 `VERIFICATION_CHECKLIST.md`，包含：
-- 核心组件验证（ReAct、Tool Offload、浏览器、文件系统）
-- Hooks 框架验证（9 个脚本）
-- Agent 团队验证（7 个 agent）
-- Skill 团队验证（14 个 skill）
-- 配置文件验证（CLAUDE.md、AGENTS.md、settings.json）
-- 项目测试验证（单元测试）
+See `VERIFICATION_CHECKLIST.md`, which includes:
+- Core component verification (ReAct, Tool Offload, Browser, File System)
+- Hooks framework verification (9 scripts)
+- Agent team verification (7 agents)
+- Skill team verification (14 skills)
+- Configuration file verification (CLAUDE.md, AGENTS.md, settings.json)
+- Project test verification (unit tests)
 
-### 质量标准
+### Quality Standards
 
-| 指标 | 标准 | 权重 |
+| Indicator | Standard | Weight |
 |------|------|------|
-| 核心组件完整性 | 100% | 30% |
-| Hooks 框架可用性 | 100% | 25% |
-| Agent 团队完整性 | 100% | 20% |
-| Skill 团队完整性 | 100% | 15% |
-| 项目测试通过率 | 100% | 10% |
+| Core component integrity | 100% | 30% |
+| Hooks framework availability | 100% | 25% |
+| Agent team integrity | 100% | 20% |
+| Skill team integrity | 100% | 15% |
+| Project test pass rate | 100% | 10% |
 
-**总分 = Σ(指标 × 权重)**
+**Total Score = Σ(indicator × weight)**
 
-- **优秀**: 95-100%
-- **良好**: 85-94%
-- **合格**: 75-84%
-- **不合格**: < 75%
+- **Excellent**: 95-100%
+- **Good**: 85-94%
+- **Pass**: 75-84%
+- **Fail**: < 75%

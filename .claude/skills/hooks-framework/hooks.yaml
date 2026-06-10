@@ -1,43 +1,49 @@
-# hooks.yaml — Harness 统一钩子配置
+# hooks.yaml — Harness Unified Hook Configuration
 #
-# 抽象事件名 → 各工具原生事件映射:
+# Abstract event → Native event mapping:
 #   on_session_start  → Claude: SessionStart       Codex: SessionStart         OpenCode: session.created
 #   on_file_edit      → Claude: PostToolUse(Edit)   Codex: PostToolUse(Edit)    OpenCode: file.edited
 #   on_tool_output    → Claude: PostToolUse(*)       Codex: PostToolUse(*)       OpenCode: tool.executed
 #   on_compact        → Claude: PreCompact          Codex: PreCompact           OpenCode: experimental.session.compacting
 #   on_turn_end       → Claude: Stop                Codex: Stop                 OpenCode: session.idle
 #
-# 脚本格式: .mjs (Node.js ESM)，支持 CLI 和 import 双模式
-# 所有脚本始终 exit 0（警告输出到 stderr，不阻塞 AI 工具）
+# All scripts: .mjs (Node.js ESM), dual-mode (CLI + import)
+# All scripts always exit 0 (warnings → stderr, never block)
 
 hooks:
   on_session_start:
     - script: context-check.mjs
-      description: 检查 AGENTS.md 新鲜度和完整性
+      description: Check AGENTS.md freshness and integrity
     - script: env-verify.mjs
-      description: 验证环境就绪
+      description: Verify environment ready
 
   on_file_edit:
     - script: lint-check.mjs
-      description: 架构边界 + docs/ 大小约束检查
+      description: Architecture boundaries + docs/ size constraint check
     - script: apply-patch.mjs
-      description: Apply Patch 补丁格式验证 — 检查 unified diff 格式、行号偏移容差、冲突检测
+      description: Apply Patch validation — unified diff format, line offset tolerance, conflict detection
 
   on_tool_output:
     - script: tool-offload.mjs
-      description: 工具输出卸载 — 大型输出只保留首尾引用，完整内容写入文件系统
+      description: Tool output offload — large outputs truncated to head/tail, full content → filesystem
       condition: output_size > 2000
     - script: retry-timeout.mjs
-      description: 容错监控 — 检测工具错误码，管理重试计数、超时和熔断状态
+      description: Fault tolerance — detect error codes, manage retry count, timeout, and circuit breaker
+    - script: context-cleanup.mjs
+      description: File ref tracking — record read files for auto-unload
 
   on_compact:
     - script: compaction.mjs
-      description: 上下文压缩 — 生成增强摘要（含 trace + metrics + 续行提示）
+      description: Context compaction — enhanced summary (trace + metrics + continuation hint)
 
   on_turn_end:
     - script: continuation.mjs
-      description: Ralph Loop — 检测中断并生成续行提示
+      description: Ralph Loop — detect interruption, generate continuation prompt
     - script: trace-log.mjs
-      description: 记录执行日志
+      description: Record execution log
     - script: quality-metric.mjs
-      description: 追踪质量指标
+      description: Track quality metrics
+    - script: test-run.mjs
+      description: Run project tests — auto-detect test framework and execute
+    - script: context-cleanup.mjs
+      description: File ref cleanup — check unloadable files and generate cleanup suggestions

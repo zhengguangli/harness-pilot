@@ -1,25 +1,25 @@
 ---
 name: observability-setup
-description: 配置可观测性堆栈。设置日志、指标、追踪系统，使智能体可查询应用状态。当用户说"配置可观测性"、"设置日志"、"observability"、"监控配置"、"追踪系统"时触发。也用于调整或扩展已有可观测性配置。
+description: Observability stack setup. Logs, metrics, tracing so agents can query app state. Triggers on "配置可观测性", "设置日志", "observability", "监控配置", "追踪系统", "可观测性".
 ---
 
-# Observability Setup — 可观测性堆栈配置
+# Observability Setup — Observability Stack Configuration
 
-## 核心理念
+## Core Philosophy
 
-**可观测性即智能体能力。** 日志/指标/追踪对智能体可查询，是自验证回路的基础。每个工作树拥有临时的可观测性堆栈，任务完成后销毁。
+**Observability is agent capability.** Logs/metrics/traces are queryable by agents and form the foundation of the self-verification loop. Each worktree gets a temporary observability stack that is destroyed after task completion.
 
-## 执行流程
+## Execution Flow
 
-### Step 1: 需求分析
+### Step 1: Requirements analysis
 
-1. 识别应用技术栈和运行环境
-2. 确定需要的信号类型（日志/指标/追踪）
-3. 确定查询方式（LogQL/PromQL/TraceQL）
+1. Identify application tech stack and runtime environment
+2. Determine required signal types (logs/metrics/traces)
+3. Determine query methods (LogQL/PromQL/TraceQL)
 
-### Step 2: 配置信号采集
+### Step 2: Configure signal collection
 
-**日志采集：**
+**Log collection:**
 ```yaml
 # vector.toml
 [sources.app_logs]
@@ -32,7 +32,7 @@ inputs = ["app_logs"]
 endpoint = "http://localhost:3100"
 ```
 
-**指标采集：**
+**Metrics collection:**
 ```yaml
 [sources.app_metrics]
 type = "prometheus_scrape"
@@ -44,7 +44,7 @@ inputs = ["app_metrics"]
 endpoint = "http://localhost:8428/api/v1/write"
 ```
 
-**追踪采集：**
+**Trace collection:**
 ```yaml
 [sources.app_traces]
 type = "opentelemetry"
@@ -57,67 +57,67 @@ inputs = ["app_traces"]
 endpoint = "http://localhost:4317"
 ```
 
-### Step 3: 配置查询接口
+### Step 3: Configure query interface
 
-为智能体提供查询工具：
+Provide query tools for agents:
 
 ```bash
-# 日志查询
+# Log query
 curl -G http://localhost:9428/api/v1/query \
   --data-urlencode 'query={app="myapp"} |= "error"'
 
-# 指标查询
+# Metrics query
 curl -G http://localhost:8428/api/v1/query \
   --data-urlencode 'query=rate(http_requests_total[5m])'
 ```
 
-### Step 4: 创建 MCP 工具（可选）
+### Step 4: Create MCP tools (optional)
 
-为智能体创建可观测性查询的 MCP 工具：
+Create MCP tools for agent observability queries:
 
 ```json
 {
   "name": "query_logs",
-  "description": "使用 LogQL 查询应用日志",
+  "description": "Query application logs using LogQL",
   "inputSchema": {
     "type": "object",
     "properties": {
-      "query": { "type": "string", "description": "LogQL 查询表达式" },
-      "start": { "type": "string", "description": "开始时间 (RFC3339)" },
-      "end": { "type": "string", "description": "结束时间 (RFC3339)" }
+      "query": { "type": "string", "description": "LogQL query expression" },
+      "start": { "type": "string", "description": "Start time (RFC3339)" },
+      "end": { "type": "string", "description": "End time (RFC3339)" }
     }
   }
 }
 ```
 
-### Step 5: Chrome DevTools 协议集成
+### Step 5: Chrome DevTools Protocol integration
 
-将 Chrome DevTools Protocol 接入智能体运行时，使智能体可直接驱动和验证 UI：
+Integrate Chrome DevTools Protocol into the agent runtime so agents can directly drive and verify UI:
 
 ```json
 {
   "name": "navigate_and_screenshot",
-  "description": "导航到 URL 并截图，用于 UI 验证",
+  "description": "Navigate to a URL and take a screenshot for UI verification",
   "inputSchema": {
     "type": "object",
     "properties": {
       "url": { "type": "string" },
-      "selector": { "type": "string", "description": "等待的元素选择器" }
+      "selector": { "type": "string", "description": "Element selector to wait for" }
     }
   }
 }
 ```
 
-**能力清单：**
-- DOM 快照：获取页面结构
-- 截图：验证 UI 状态
-- 导航：驱动用户流程
-- 运行时事件：观察网络请求、控制台日志
-- 录屏：录制故障/修复演示视频
+**Capability list:**
+- DOM snapshot: Get page structure
+- Screenshot: Verify UI state
+- Navigation: Drive user flows
+- Runtime events: Observe network requests, console logs
+- Screen recording: Record failure/fix demonstration videos
 
-### Step 6: 生成 docker-compose
+### Step 6: Generate docker-compose
 
-**完整方案（适合大型项目）：**
+**Full solution (suitable for large projects):**
 
 ```yaml
 version: '3.8'
@@ -136,28 +136,28 @@ services:
     volumes: ["./vector.toml:/etc/vector/vector.toml"]
 ```
 
-### Step 7: 轻量级方案（适合小型项目/个人项目）
+### Step 7: Lightweight solution (for small/personal projects)
 
-不需要 VictoriaMetrics 全家桶。使用 stdout + 文件日志 + 简单查询：
+No need for the full VictoriaMetrics suite. Use stdout + file logging + simple queries:
 
-**方案：结构化日志 + jq 查询**
+**Approach: Structured logging + jq query**
 
 ```bash
-# 1. 应用输出结构化日志到 stdout
-# 2. 日志收集到文件（由进程管理器或 docker 处理）
-# 3. 用 jq/grep 查询
+# 1. App outputs structured logs to stdout
+# 2. Logs collected to file (handled by process manager or docker)
+# 3. Query with jq/grep
 
-# 查询错误日志
+# Query error logs
 cat app.log | jq 'select(.level == "error")'
 
-# 按时间段查询
+# Query by time range
 cat app.log | jq 'select(.timestamp > "2026-01-01T00:00:00Z")'
 
-# 按用户查询
+# Query by user
 cat app.log | jq 'select(.user_id == "123")'
 ```
 
-**Node.js 示例（pino）：**
+**Node.js example (pino):**
 
 ```javascript
 const pino = require('pino');
@@ -167,7 +167,7 @@ logger.info({ user_id: '123', action: 'login' }, 'User logged in');
 logger.error({ err: error, user_id: '123' }, 'Payment failed');
 ```
 
-**Python 示例（structlog）：**
+**Python example (structlog):**
 
 ```python
 import structlog
@@ -177,7 +177,7 @@ logger.info("user_logged_in", user_id="123", ip="1.2.3.4")
 logger.error("payment_failed", user_id="123", error_code="CARD_DECLINED")
 ```
 
-**轻量级 docker-compose（仅日志）：**
+**Lightweight docker-compose (logs only):**
 
 ```yaml
 version: '3.8'
@@ -193,30 +193,30 @@ services:
         max-file: "3"
 ```
 
-**何时选择哪个方案：**
+**When to choose which solution:**
 
-| 方案 | 适用场景 | 复杂度 |
+| Solution | Applicable Scenarios | Complexity |
 |------|----------|--------|
-| 完整方案 | 多服务、需要指标/追踪、团队协作 | 高 |
-| 轻量级方案 | 单服务、个人项目、日志足够 | 低 |
+| Full solution | Multi-service, needs metrics/tracing, team collaboration | High |
+| Lightweight solution | Single service, personal project, logs are sufficient | Low |
 
-## 输入/输出协议
+## Input/Output Protocol
 
-**输入：**
-- 项目技术栈
-- 应用端口和日志路径
-- 部署环境（本地/docker/k8s）
+**Input:**
+- Project tech stack
+- Application ports and log paths
+- Deployment environment (local/docker/k8s)
 
-**输出：**
+**Output:**
 - docker-compose.yml
-- vector.toml（信号采集配置）
-- MCP 工具定义（可选）
-- docs/RELIABILITY.md 更新
+- vector.toml (signal collection configuration)
+- MCP tool definitions (optional)
+- docs/RELIABILITY.md update
 
-## 质量标准
+## Quality Standards
 
-- 日志/指标/追踪三个信号全部可查询
-- 查询接口对所有 agent 可访问
-- docker-compose 一键启动，无需额外配置
-- 轻量级方案可用 `jq` 替代 Grafana 进行日志查询
-- 截屏证据保存路径标准化（`.workspace/evidence/`）
+- All three signals (logs/metrics/traces) are queryable
+- Query interfaces are accessible to all agents
+- docker-compose starts with one command, no additional configuration needed
+- Lightweight solution can use `jq` instead of Grafana for log queries
+- Screenshot evidence save path is standardized (`.workspace/evidence/`)

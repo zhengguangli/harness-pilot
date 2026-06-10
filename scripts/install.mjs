@@ -196,7 +196,8 @@ function countExisting(targetDir) {
   const allSkills = [
     'harness-orchestrator', 'harness-init', 'context-setup', 'architecture-guard',
     'entropy-gc', 'observability-setup', 'sandbox-exec', 'quality-gate',
-    'agent-readability', 'harness-evolve', 'hooks-framework'
+    'agent-readability', 'harness-evolve', 'hooks-framework',
+    'web-search', 'mcp-connector', 'tool-search'
   ]
   for (const skill of allSkills) {
     if (!existsSync(join(skillsDir, skill, 'SKILL.md'))) {
@@ -317,6 +318,9 @@ function installAgentsMd(targetDir, dryRun) {
 | agent-readability | 智能体可读性优化 |
 | harness-evolve | 反馈驱动演进 |
 | hooks-framework | 确定性执行钩子 |
+| web-search | Web 搜索集成 |
+| mcp-connector | MCP 工具连接 |
+| tool-search | 动态工具发现 |
 
 ## 导航指引
 - 新项目初始化？使用 \`harness-init\` 或 \`harness-orchestrator\` skill
@@ -325,6 +329,8 @@ function installAgentsMd(targetDir, dryRun) {
 - 知识库管理？读 \`.claude/skills/context-setup/SKILL.md\`
 - 演进反馈？读 \`.claude/skills/harness-evolve/SKILL.md\`
 - Hooks 配置？读 \`.claude/skills/hooks-framework/SKILL.md\`
+- Web 搜索？读 \`.claude/skills/web-search/SKILL.md\`
+- MCP 集成？读 \`.claude/skills/mcp-connector/SKILL.md\`
 - 安装部署？读 \`README.md\` 或运行 \`node scripts/install.mjs --help\``
 
   return injectSection(file, 'AGENTS.md', harnessSection, dryRun)
@@ -346,7 +352,7 @@ function installClaudeMd(targetDir, dryRun) {
 
 - [AGENTS.md](AGENTS.md) — 项目主文档和 harness 指针
 - Agent 定义：\`.claude/agents/\`（7 个）
-- Skill 定义：\`.claude/skills/\`（11 个）
+- Skill 定义：\`.claude/skills/\`（14 个）
 - 安装脚本：\`scripts/install.mjs\`
 
 ### 核心原则
@@ -424,7 +430,8 @@ function installSkills(targetDir, tool, dryRun) {
   const skills = [
     'harness-orchestrator', 'harness-init', 'context-setup', 'architecture-guard',
     'entropy-gc', 'observability-setup', 'sandbox-exec', 'quality-gate',
-    'agent-readability', 'harness-evolve', 'hooks-framework'
+    'agent-readability', 'harness-evolve', 'hooks-framework',
+    'web-search', 'mcp-connector', 'tool-search'
   ]
 
   let installed = 0

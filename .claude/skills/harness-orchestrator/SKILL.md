@@ -1,44 +1,44 @@
 ---
 name: harness-orchestrator
-description: Harness 团队编排器。协调所有 agent 和 skill 的执行流程，管理阶段流转和数据传递。当用户说"运行 harness"、"开始构建"、"harness run"、"执行 harness"、"初始化项目 harness"时触发。也用于重新执行、更新、补充已有 harness 的场景。
+description: Harness team orchestrator. Coordinates agent/skill execution, phase transitions, data handoff. Triggers on "运行 harness", "harness run", "执行 harness", "orchestrator", "编排". For init use harness-init instead.
 ---
 
-# Harness Orchestrator — 团队编排器
+# Harness Orchestrator — Team Orchestrator
 
-## 核心理念
+## Core Philosophy
 
-**人类掌舵，智能体执行。** 工程师的角色从编写代码转向设计环境、明确意图、构建反馈回路。
+**Humans steer, agents execute.** The engineer's role shifts from writing code to designing environments, articulating intent, and building feedback loops.
 
-## Hooks 集成
+## Hooks Integration
 
-本编排器在各阶段自动触发 `hooks-framework` 中定义的钩子：
+This orchestrator automatically triggers hooks defined in `hooks-framework` at each phase:
 
-- **Pre-execution**：context-check, env-verify, plan-inject
-- **Post-execution**：lint-check, test-run, quality-gate
-- **Interception**：continuation (Ralph Loop), compaction, tool-offload
-- **Observation**：trace-log, quality-metric, drift-detect
+- **Pre-execution**: context-check, env-verify, plan-inject
+- **Post-execution**: lint-check, test-run, quality-gate
+- **Interception**: continuation (Ralph Loop), compaction, tool-offload
+- **Observation**: trace-log, quality-metric, drift-detect
 
-详见 `.claude/skills/hooks-framework/SKILL.md`。
+See `.claude/skills/hooks-framework/SKILL.md` for details.
 
-## Phase 0: 上下文检查
+## Phase 0: Context Check
 
-在工作流开始前，检查现有输出确定执行模式：
+Before workflow starts, check existing outputs to determine execution mode:
 
-- `.workspace/` 存在 + 用户请求部分修改 → **部分重执行**（仅调用相关 agent）
-- `.workspace/` 存在 + 用户提供新输入 → **新执行**（移动 `.workspace/` 到 `.workspace_prev/`）
-- `.workspace/` 不存在 → **初始执行**
+- `.workspace/` exists + user requests partial modification → **Partial Re-execution** (only invoke relevant agents)
+- `.workspace/` exists + user provides new input → **New Execution** (move `.workspace/` to `.workspace_prev/`)
+- `.workspace/` does not exist → **Initial Execution**
 
-## Phase 1: 项目探测与需求分析
+## Phase 1: Project Discovery & Requirements Analysis
 
-**执行模式：Sub-agent**
+**Execution Mode: Sub-agent**
 
-1. 并行调用探测：
-   - 技术栈识别（package.json / Cargo.toml / go.mod / pyproject.toml）
-   - 目录结构分析
-   - 现有文档扫描
-   - 目标 AI 工具检测（claude-code / codex / opencode）
+1. Parallel discovery calls:
+   - Tech stack identification (package.json / Cargo.toml / go.mod / pyproject.toml)
+   - Directory structure analysis
+   - Existing documentation scan
+   - Target AI tool detection (claude-code / codex / opencode)
 
-2. 输出：`01_project_analysis.json`
+2. Output: `01_project_analysis.json`
 
 ```json
 {
@@ -50,150 +50,150 @@ description: Harness 团队编排器。协调所有 agent 和 skill 的执行流
 }
 ```
 
-## Phase 2: 架构设计
+## Phase 2: Architecture Design
 
-**执行模式：Agent Team**
+**Execution Mode: Agent Team**
 
-1. 创建团队：architect + context-engineer
-2. architect 设计分层架构规则
-3. context-engineer 规划知识库结构
-4. 团队成员通过 SendMessage 协调
+1. Create team: architect + context-engineer
+2. architect designs layered architecture rules
+3. context-engineer plans knowledge base structure
+4. Team members coordinate via SendMessage
 
-**输出：**
-- `02_architecture.md` — 架构设计
-- `02_context_plan.md` — 知识库规划
-- `02_plan.md` — 执行计划（任务分解、依赖关系、并行策略）
+**Output:**
+- `02_architecture.md` — Architecture design
+- `02_context_plan.md` — Knowledge base plan
+- `02_plan.md` — Execution plan (task breakdown, dependencies, parallel strategy)
 
-## Phase 3: 知识库搭建
+## Phase 3: Knowledge Base Construction
 
-**执行模式：Agent Team**
+**Execution Mode: Agent Team**
 
-1. 创建团队：context-engineer + builder
-2. context-engineer 生成 AGENTS.md 和 docs/ 结构
-3. builder 生成骨架文档
+1. Create team: context-engineer + builder
+2. context-engineer generates AGENTS.md and docs/ structure
+3. builder generates skeleton documents
 
-**输出：**
+**Output:**
 - `AGENTS.md`
-- `docs/` 目录及骨架文档
+- `docs/` directory and skeleton documents
 
-## 并行执行策略
+## Parallel Execution Strategy
 
-**原则：** 独立子任务并行执行，依赖任务串行执行。
+**Principle:** Independent subtasks execute in parallel, dependent tasks execute serially.
 
-### 子代理生成机制
+### Sub-agent Generation Mechanism
 
-1. **任务分解**：从 `02_plan.md` 读取任务列表
-2. **依赖分析**：识别任务间的依赖关系
-3. **并行分组**：将无依赖的任务分组，每组可并行执行
-4. **子代理生成**：为每组任务生成独立子代理
+1. **Task Breakdown**: Read task list from `02_plan.md`
+2. **Dependency Analysis**: Identify dependencies between tasks
+3. **Parallel Grouping**: Group tasks with no dependencies; each group can execute in parallel
+4. **Sub-agent Generation**: Generate independent sub-agents for each task group
 
 ```javascript
-// 伪代码示例
+// Pseudocode example
 const tasks = readPlan('02_plan.md')
 const groups = analyzeDependencies(tasks)
 
 for (const group of groups) {
-  // 并行启动子代理
+  // Launch sub-agents in parallel
   await Promise.all(group.map(task => spawnSubagent(task)))
 }
 ```
 
-### 并行执行规则
+### Parallel Execution Rules
 
-| 规则 | 说明 |
+| Rule | Description |
 |------|------|
-| 最大并行数 | 默认 3 个子代理（可配置） |
-| 超时控制 | 每个子代理 10 分钟超时 |
-| 错误处理 | 单个子代理失败不影响其他 |
-| 结果聚合 | 所有子代理完成后统一收集结果 |
+| Max Parallelism | Default 3 sub-agents (configurable) |
+| Timeout Control | Each sub-agent 10-minute timeout |
+| Error Handling | Single sub-agent failure does not affect others |
+| Result Aggregation | Collect results after all sub-agents complete |
 
-### 子代理通信
+### Sub-agent Communication
 
-- **共享文件系统**：通过 `.workspace/` 目录共享数据
-- **消息传递**：通过 SendMessage 协调（仅在必要时）
-- **状态文件**：每个子代理写入状态文件（`.workspace/subagent_*.json`）
+- **Shared Filesystem**: Share data via `.workspace/` directory
+- **Message Passing**: Coordinate via SendMessage (only when necessary)
+- **Status Files**: Each sub-agent writes status files (`.workspace/subagent_*.json`)
 
-## Phase 4: 技能生成
+## Phase 4: Skill Generation
 
-**执行模式：Sub-agent（并行）**
+**Execution Mode: Sub-agent (parallel)**
 
-1. 根据项目需求选择标准技能包
-2. 并行调用 builder agent 生成各技能
-3. sre agent 配置可观测性和熵管理（如需要）
+1. Select standard skill packages based on project needs
+2. Invoke builder agents in parallel to generate each skill
+3. sre agent configures observability and entropy management (if needed)
 
-**输出：**
-- `.claude/skills/` 目录下的技能文件
+**Output:**
+- Skill files under `.claude/skills/` directory
 
-## Phase 5: 质量审查
+## Phase 5: Quality Review
 
-**执行模式：Agent Team**
+**Execution Mode: Agent Team**
 
-1. 创建团队：reviewer + architect
-2. reviewer 审查所有产出物
-3. architect 验证架构约束一致性
+1. Create team: reviewer + architect
+2. reviewer reviews all deliverables
+3. architect verifies architecture constraint consistency
 
-**输出：**
-- `05_review_report.md` — 审查报告
+**Output:**
+- `05_review_report.md` — Review report
 
-## Phase 6: 验证
+## Phase 6: Verification
 
-**执行模式：Sub-agent**
+**Execution Mode: Sub-agent**
 
-1. qa agent 执行结构验证
-2. qa agent 执行触发验证
-3. qa agent 执行干跑验证
+1. qa agent performs structural verification
+2. qa agent performs trigger verification
+3. qa agent performs dry-run verification
 
-**输出：**
-- `06_verification_report.md` — 验证报告
+**Output:**
+- `06_verification_report.md` — Verification report
 
-## Phase 7: 注册与交付
+## Phase 7: Registration & Delivery
 
-**执行模式：Sub-agent**
+**Execution Mode: Sub-agent**
 
-1. 生成 CLAUDE.md（含 harness 指针和变更历史）
-2. 清理 `.workspace/` 中间产物
-3. 生成最终交付清单
+1. Generate CLAUDE.md (with harness pointer and change history)
+2. Clean up `.workspace/` intermediate artifacts
+3. Generate final delivery checklist
 
-**输出：**
+**Output:**
 - `CLAUDE.md`
-- 交付清单
+- Delivery checklist
 
-## 输入/输出协议
+## Input/Output Protocol
 
-| Phase | 输出位置 | 下一 Phase 读取方式 |
+| Phase | Output Location | Next Phase Reads |
 |-------|----------|---------------------|
-| 1 | `.workspace/01_*.json` | Phase 2 读取 |
-| 2 | `.workspace/02_*.md` | Phase 3 读取 |
-| 3 | 项目根目录 | Phase 4+ 直接读取 |
-| 4 | `.claude/skills/` | Phase 5 读取 |
-| 5 | `.workspace/05_*.md` | Phase 6 读取 |
-| 6 | `.workspace/06_*.md` | Phase 7 读取 |
-| 7 | 项目根目录 | 最终交付 |
+| 1 | `.workspace/01_*.json` | Phase 2 reads |
+| 2 | `.workspace/02_*.md` | Phase 3 reads |
+| 3 | Project root | Phase 4+ reads directly |
+| 4 | `.claude/skills/` | Phase 5 reads |
+| 5 | `.workspace/05_*.md` | Phase 6 reads |
+| 6 | `.workspace/06_*.md` | Phase 7 reads |
+| 7 | Project root | Final delivery |
 
-## 计划文件规范
+## Plan File Specification
 
-**文件位置：** `.workspace/02_plan.md`
+**File Location:** `.workspace/02_plan.md`
 
-**格式要求：**
+**Format Requirements:**
 ```markdown
-# 执行计划
+# Execution Plan
 
-## 任务列表
+## Task List
 
-| ID | 任务 | 依赖 | 预估时间 | 状态 |
+| ID | Task | Dependencies | Estimated Time | Status |
 |----|------|------|----------|------|
-| T1 | 生成 AGENTS.md | 无 | 2min | pending |
-| T2 | 创建 docs/ 结构 | T1 | 3min | pending |
-| T3 | 配置 hooks | T1 | 5min | pending |
-| T4 | 生成 skills | T2, T3 | 10min | pending |
+| T1 | Generate AGENTS.md | None | 2min | pending |
+| T2 | Create docs/ structure | T1 | 3min | pending |
+| T3 | Configure hooks | T1 | 5min | pending |
+| T4 | Generate skills | T2, T3 | 10min | pending |
 
-## 并行分组
+## Parallel Grouping
 
-- **组 1**（可并行）：T1
-- **组 2**（可并行）：T2, T3
-- **组 3**（串行）：T4
+- **Group 1** (parallelizable): T1
+- **Group 2** (parallelizable): T2, T3
+- **Group 3** (serial): T4
 
-## 依赖图
+## Dependency Graph
 
 ```mermaid
 graph LR
@@ -203,59 +203,59 @@ graph LR
   T3 --> T4
 ```
 
-## 里程碑
+## Milestones
 
-- M1: 知识库搭建完成（T1, T2）
-- M2: 基础设施就绪（T3）
-- M3: 技能生成完成（T4）
+- M1: Knowledge base construction complete (T1, T2)
+- M2: Infrastructure ready (T3)
+- M3: Skill generation complete (T4)
 ```
 
-**使用方式：**
-- Phase 2 生成计划文件
-- Phase 4 读取计划文件，按并行分组执行
-- 每个任务完成后更新状态
-- 最终清理时归档到 `.workspace/completed/`
+**Usage:**
+- Phase 2 generates the plan file
+- Phase 4 reads the plan file, executes per parallel grouping
+- Update status after each task completion
+- Archive to `.workspace/completed/` during final cleanup
 
-## 错误处理
+## Error Handling
 
-| 错误类型 | 策略 |
+| Error Type | Strategy |
 |----------|------|
-| Agent 超时 | 重试一次，跳过并记录 |
-| 输出格式错误 | 要求 agent 修正后重新提交 |
-| Agent 间冲突 | 由 reviewer 仲裁 |
-| 缺少依赖 | 暂停当前 phase，先解决依赖 |
+| Agent Timeout | Retry once, skip and log |
+| Output Format Error | Require agent to correct and resubmit |
+| Inter-agent Conflict | Arbitrated by reviewer |
+| Missing Dependency | Pause current phase, resolve dependency first |
 
-## 团队规模指南
+## Team Size Guidelines
 
-| 工作规模 | 推荐团队大小 | 每成员任务数 | 最大并行度 |
+| Work Scale | Recommended Team Size | Tasks per Member | Max Parallelism |
 |----------|-------------|-------------|-----------|
-| 小型（5-10 任务） | 2-3 成员 | 3-5 | 3 |
-| 中型（10-20 任务） | 3-5 成员 | 4-6 | 5 |
-| 大型（20-50 任务） | 5-7 成员 | 4-5 | 7 |
-| 超大型（50-200 任务） | 7-15 成员 | 5-10 | 15 |
-| 大规模并行（200+ 任务） | 15-50 成员 | 5-10 | 50 |
+| Small (5-10 tasks) | 2-3 members | 3-5 | 3 |
+| Medium (10-20 tasks) | 3-5 members | 4-6 | 5 |
+| Large (20-50 tasks) | 5-7 members | 4-5 | 7 |
+| Very Large (50-200 tasks) | 7-15 members | 5-10 | 15 |
+| Massively Parallel (200+ tasks) | 15-50 members | 5-10 | 50 |
 
-### 大规模并行策略
+### Massively Parallel Strategy
 
-**适用场景：** 批量代码迁移、全仓重构、多模块并行构建。
+**Applicable Scenarios:** Batch code migration, repo-wide refactoring, multi-module parallel builds.
 
-**核心机制：**
-- **分片协调（Sharding）**：将代码库按目录/模块分片，每个分片独立 agent
-- **共享状态隔离**：每个 agent 独立 git worktree，通过 merge 合并结果
-- **批量合并**：所有 agent 完成后统一 merge，冲突由 orchestrator 仲裁
-- **进度聚合**：所有 agent 写入统一进度文件（`.workspace/progress.json`）
+**Core Mechanisms:**
+- **Sharding**: Shard codebase by directory/module; independent agent per shard
+- **Shared State Isolation**: Independent git worktree per agent; merge results via merge
+- **Batch Merge**: Unified merge after all agents complete; conflicts arbitrated by orchestrator
+- **Progress Aggregation**: All agents write to unified progress file (`.workspace/progress.json`)
 
-**约束：**
-- 大规模并行时关闭 intermediate user messaging（避免信息洪流）
-- 所有 agent 只通过 `.workspace/` 通信，不使用 `SendMessage`（避免消息风暴）
-- 单个 agent 超时不影响其他，最终汇总时检查完整性
+**Constraints:**
+- Disable intermediate user messaging during massively parallel execution (avoid information flood)
+- All agents communicate only via `.workspace/`, do not use `SendMessage` (avoid message storm)
+- Single agent timeout does not affect others; check completeness during final aggregation
 
-## 测试场景
+## Test Scenarios
 
-### 正常流程
-用户："为这个 Next.js 项目配置 harness"  
-预期：完整执行 Phase 1-7，输出所有配置文件
+### Normal Flow
+User: "Configure harness for this Next.js project"  
+Expected: Execute Phase 1-7 fully, output all configuration files
 
-### 错误流程
-用户："更新 harness 的质量审查标准"  
-预期：Phase 0 检测到现有配置 → 部分重执行 → 仅更新 quality-gate skill 和相关文档
+### Error Flow
+User: "Update harness quality review standards"  
+Expected: Phase 0 detects existing configuration → Partial re-execution → Only update quality-gate skill and related documents

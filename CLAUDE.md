@@ -1,95 +1,97 @@
-# harness-pilot — Harness Engineering 技能包
+# harness-pilot — Harness Engineering Toolkit
 
 ## Harness: Harness Engineering
 
-**Goal:** 为任意项目一键配置 AI agent 团队和 harness 体系
+**Goal:** One-click AI agent team + harness system setup for any project
 
-**Trigger:** 工作请求涉及 harness 配置、agent 团队搭建、知识库架构时，使用 `harness-orchestrator` skill。简单问题直接回答。
+**Trigger:** When work involves harness config, agent team setup, or knowledge architecture, use `harness-orchestrator` skill. Answer simple questions directly.
 
-## 核心原则
+## Core Principles
 
-1. **人类掌舵，智能体执行** — 工程师设计环境，AI 执行代码
-2. **仓库即记录系统** — 仓库外的知识对智能体不存在
-3. **给地图，不给说明书** — AGENTS.md 是目录，不是百科全书
-4. **约束即加速器** — 严格的架构边界是倍增器
-5. **渐进式披露** — 按需加载上下文，保护窗口
-6. **纠错成本低，等待成本高** — 快速合并+后续修复优于无限阻塞
-7. **Agent = Model + Harness** — 模型提供智能，Harness 让智能可用
-8. **ReAct 循环** — 推理→行动→观察→重复，是 agent 执行的核心模式
-9. **共演化策略** — 模型和 harness 协同进化，互相增强
-10. **模型中立性** — 最优 harness 不一定是模型训练时的那个；持续基准测试评估不同配置
-11. **确定性与可操作** — agent 行为规范必须可机械执行，不依赖模型自行推断
+1. **Humans steer, agents execute** — engineer designs environment, AI writes code
+2. **Repo = system of record** — knowledge outside repo doesn't exist to agents
+3. **Map, not manual** — AGENTS.md is TOC, not encyclopedia. Keep ≤100 lines.
+4. **Constraints = multipliers** — rigid architecture boundaries are multipliers
+5. **Progressive disclosure** — lazy-load context, protect context window
+6. **Corrections cheap, waiting expensive** — fast merge + follow-up fix > infinite blocking
+7. **Agent = Model + Harness** — model provides intelligence, harness makes it useful
+8. **ReAct loop** — Reasoning → Action → Observe → Repeat, core agent execution pattern
+9. **Co-evolution** — model and harness co-evolve, mutually reinforce
+10. **Model neutrality** — optimal harness ≠ training harness; continuously benchmark
+11. **Deterministic & actionable** — agent behavior rules must be mechanically enforceable
 
-## 模型与 Harness 共演化
+## Model-Harness Co-evolution
 
-**关键认知：** 模型训练和 harness 设计是耦合的。今天的 agent 产品（如 Claude Code、Codex）在模型和 harness 的协同中进行后训练。
+**Key insight:** Model training and harness design are coupled. Today's agents (Claude Code, Codex) are post-trained with harness-in-the-loop.
 
-**共演化循环：**
-1. 发现有用的 harness 原语（如文件系统操作、bash 执行、计划）
-2. 将这些原语集成到 harness 中
-3. 在训练时使用 harness，使模型原生擅长这些操作
-4. 下一代模型在 harness 中表现更好
+**Co-evolution cycle:**
+1. Discover useful harness primitives (filesystem ops, bash exec, planning)
+2. Integrate primitives into harness
+3. Train model with harness → model gets natively good at these operations
+4. Next-gen models perform better in the harness
 
-**应对策略：**
-- **不依赖特定 harness**：最佳 harness 可能不是模型后训练时使用的那个
-- **持续实验**：通过 Terminal Bench 等基准测试评估不同 harness 配置
-- **拥抱变化**：随着模型能力提升，部分 harness 功能会被模型吸收
+**Strategy:**
+- **Don't bind to one harness**: optimal harness may not be the one used during post-training
+- **Continuous experiment**: evaluate configs via Terminal Bench benchmarks
+- **Embrace change**: as model capability rises, some harness features get absorbed
 
-## 模型中立性原则
+## Model Neutrality
 
-**核心认知：** 模型训练中与 harness 的耦合会导致"过度拟合"——模型在特定 harness 中表现优异，但在其他 harness 中显著下降（如 Opus 4.6 在 Claude Code 中的 Terminal Bench 分数远低于其他 harness）。模型中立性不是忽略 harness 的价值，而是承认：
+Harness coupling during training causes "overfitting" — models excel in one harness but drop hard in others (e.g. Opus 4.6 in Claude Code scores far below other harnesses on Terminal Bench).
 
-- **Harness 可移植性**：同样的模型在不同 harness 中性能差异巨大，优化 harness 本身是重要杠杆
-- **独立评估**：用 Terminal Bench 2.0 等基准跨 harness 评估模型，选择最佳配置
-- **tool-logic 敏感度**：模型对工具实现的细节高度敏感（如 `apply_patch` 格式），改变工具逻辑会影响模型性能
-- **持续基准测试**：定期用不同 harness 配置测试模型，追踪性能变化
+- **Harness portability**: same model, different harness → massive perf difference. Optimizing the harness is a key lever.
+- **Independent evaluation**: cross-harness benchmark via Terminal Bench 2.0
+- **Tool-logic sensitivity**: models are sensitive to tool impl details (e.g. `apply_patch` format)
+- **Continuous benchmarking**: regularly test models across harness configs, track trends
 
-## 运行时配置参数
+## Runtime Config
 
-### reasoning_effort（推理深度）
+### reasoning_effort
 
-现代模型支持调节推理深度，在速度与质量之间平衡：
+| Level | Use case | Latency | Quality |
+|-------|----------|---------|---------|
+| `low` | Simple confirmations, known ops | Low | Basic |
+| `medium` | Daily coding, code review | Mid | Good (default) |
+| `high` | Architecture design, complex refactor | High | Great |
+| `xhigh` | Long-horizon autonomous tasks | Very high | Best |
 
-| 级别 | 适用场景 | 延迟 | 质量 |
-|------|----------|------|------|
-| `low` | 简单确认、已知操作 | 低 | 基础 |
-| `medium` | 日常编码、代码审查 | 中 | 良好（推荐默认） |
-| `high` | 架构设计、复杂重构 | 高 | 优秀 |
-| `xhigh` | 长时间自主任务 | 很高 | 最佳 |
-
-**配置方式：** 在 `.claude/settings.json` 中通过 env 变量设置。
+Config via env in `.claude/settings.json`.
 
 ### Prompt Caching
 
-Prompt caching 可节省 50-90% 的重复上下文 token 成本。自动缓存：
-- System prompts（所有 agent）
-- AGENTS.md 内容（跨 session 不变）
-- 工具定义 Schema（重复使用）
-- 对话历史中不可变的消息前缀
+Saves 50-90% repeated context token cost. Auto-cached:
+- System prompts (all agents)
+- AGENTS.md content (unchanged across sessions)
+- Tool definition schemas (repeated use)
+- Immutable message prefixes in conversation history
 
-## 架构地图
+## Architecture Map
 
-- [AGENTS.md](AGENTS.md) — 项目主文档和 harness 指针
-- Agent 定义：`.claude/agents/`（7 个）
-- Skill 定义：`.claude/skills/`（14 个）
-- 安装脚本：`scripts/install.mjs`
+- [AGENTS.md](AGENTS.md) — main project doc + harness pointer
+- Agents: `.claude/agents/` (7)
+- Skills: `.claude/skills/` (14)
+- Install: `scripts/install.mjs`
 
-## 导航指引
+## Navigation
 
-- 初始化？`harness-init` / `harness-orchestrator`
-- 架构？`.claude/agents/architect.md`
-- 质量？`.claude/skills/quality-gate/SKILL.md`
-- 知识库？`.claude/skills/context-setup/SKILL.md`
-- Hooks？`.claude/skills/hooks-framework/SKILL.md`
-- 演进？`.claude/skills/harness-evolve/SKILL.md`
+- Init? `harness-init` / `harness-orchestrator`
+- Architecture? `.claude/agents/architect.md`
+- Quality? `.claude/skills/quality-gate/SKILL.md`
+- Knowledge? `.claude/skills/context-setup/SKILL.md`
+- Hooks? `.claude/skills/hooks-framework/SKILL.md`
+- Evolve? `.claude/skills/harness-evolve/SKILL.md`
 
 ## Change History
 
 | Date | Change | Target | Reason |
 |------|--------|--------|--------|
-| 2026-06-09 | Initial configuration | All | 基于 OpenAI + LangChain Harness Engineering 规范创建 |
-| 2026-06-09 | hooks-framework 三工具统一 | hooks-framework | .mjs 脚本 + Claude/Codex/OpenCode 原生 hooks |
-| 2026-06-09 | 上下文管理强化 | hooks-framework | continuation → Stop hook, compaction → PreCompact hook |
-| 2026-06-10 | 跨平台改造 | scripts, hooks | 移除 install.sh，统一使用 install.mjs；修复所有脚本跨平台兼容性 |
-| 2026-06-10 | Harness 文档对齐 v1 | All | 新增模型中立性原则、apply_patch/容错/Shell规范/浏览器/WebSearch/MCP/ToolSearch |
-| 2026-06-10 | Harness 文档对齐 v2 | All | Git安全规则、错误处理规范、并行工具调用、Non-Interactive模式、输出格式、Agent消息协议、Trace自分析、A/B测试、大规模并行、API-Native Compaction、Prompt Caching、reasoning_effort、语义检索、Computer Use、AI Slop防护、DRY指令 |
+| 2026-06-09 | Initial configuration | All | Based on OpenAI + LangChain Harness Engineering specs |
+| 2026-06-09 | hooks-framework unified | hooks-framework | .mjs scripts + Claude/Codex/OpenCode native hooks |
+| 2026-06-09 | Context mgmt enhanced | hooks-framework | continuation → Stop hook, compaction → PreCompact hook |
+| 2026-06-10 | Cross-platform migration | scripts, hooks | Removed install.sh, unified to install.mjs |
+| 2026-06-10 | Harness docs alignment v1 | All | Model neutrality, apply_patch, fault tolerance, Shell spec, Browser, WebSearch, MCP, ToolSearch |
+| 2026-06-10 | Harness docs alignment v2 | All | Git safety, error handling, parallel tool calls, Non-Interactive mode, output format, agent msg protocol, trace self-analysis, A/B testing, mass parallelism, API-Native Compaction, Prompt Caching, reasoning_effort, semantic search, Computer Use, AI Slop guard, DRY instructions |
+| 2026-06-10 | entropy-gc cross-platform | entropy-gc | Converted drift-scan.sh and quality-score.sh to .mjs |
+| 2026-06-10 | Code style guidelines | All | Human+AI friendly, strong typing, decoupling, test-driven |
+| 2026-06-10 | Mixed-language strategy | All | High-freq context → EN, docs/ → ZH |
+| 2026-06-10 | Auto-unload + Context Rot | hooks-framework, context-setup, orchestrator | Context Rot definition, self-verification loop, context-cleanup.mjs, @ref tracking |

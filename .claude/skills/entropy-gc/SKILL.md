@@ -1,119 +1,119 @@
 ---
 name: entropy-gc
-description: 熵管理与垃圾收集。检测代码漂移、质量退化、技术债务，发起清理 PR。当用户说"垃圾收集"、"代码清理"、"漂移检测"、"entropy gc"、"技术债务"、"质量扫描"时触发。也用于定期自动运行的熵管理任务。
+description: Entropy management & garbage collection. Detect code drift, quality degradation, tech debt, open cleanup PRs. Triggers on "垃圾收集", "代码清理", "漂移检测", "entropy gc", "技术债务", "技术债", "质量扫描".
 ---
 
-# Entropy GC — 熵管理与垃圾收集
+# Entropy GC — Entropy Management & Garbage Collection
 
-## 核心理念
+## Core Philosophy
 
-**熵是必然的。** 智能体会复现仓库中已存在的模式——包括不理想的模式。技术债务如高息贷款，小额持续偿还优于累积后批量处理。
+**Entropy is inevitable.** Agents reproduce patterns already present in the repository—including suboptimal ones. Technical debt is like a high-interest loan: small continuous repayments are better than batch processing after accumulation.
 
-## 执行流程
+## Execution Flow
 
-### Step 1: 加载黄金原则
+### Step 1: Load Golden Principles
 
-从以下来源加载质量标准：
-- `docs/QUALITY_SCORE.md` — 质量评分
-- `docs/ARCHITECTURE.md` — 架构约束
-- `docs/SECURITY.md` — 安全要求
+Load quality standards from the following sources:
+- `docs/QUALITY_SCORE.md` — Quality scoring
+- `docs/ARCHITECTURE.md` — Architecture constraints
+- `docs/SECURITY.md` — Security requirements
 
-### Step 2: 漂移扫描
+### Step 2: Drift Scan
 
-| 扫描维度 | 检查内容 |
+| Scan Dimension | What to Check |
 |----------|----------|
-| 架构漂移 | 依赖方向违规、层次边界突破 |
-| 模式漂移 | 不良模式复现、重复代码 |
-| 文档漂移 | 过时文档、缺失交叉引用 |
-| 工具漂移 | 废弃依赖、未使用的工具 |
-| 品味漂移 | 命名不一致、日志格式不统一 |
+| Architecture Drift | Dependency direction violations, layer boundary breaches |
+| Pattern Drift | Bad pattern reproduction, duplicate code |
+| Documentation Drift | Outdated docs, missing cross-references |
+| Tool Drift | Deprecated dependencies, unused tools |
+| Taste Drift | Naming inconsistency, non-uniform log formatting |
 
-### Step 3: 质量评分
+### Step 3: Quality Scoring
 
-为每个产品领域和架构层计算质量评分：
+Calculate quality scores for each product domain and architecture layer:
 
 ```markdown
-## Quality Score: {领域名}
+## Quality Score: {domain name}
 
-| 维度 | 评分 (0-10) | 差距说明 |
+| Dimension | Score (0-10) | Gap Description |
 |------|------------|----------|
-| 架构合规 | 8 | 少量边界违规 |
-| 测试覆盖 | 6 | 核心逻辑 85% |
-| 文档完整性 | 7 | 缺少 API 文档 |
-| 安全性 | 9 | 无已知漏洞 |
-| 可维护性 | 7 | 2个过大的文件 |
+| Architecture Compliance | 8 | Minor boundary violations |
+| Test Coverage | 6 | Core logic 85% |
+| Documentation Completeness | 7 | Missing API docs |
+| Security | 9 | No known vulnerabilities |
+| Maintainability | 7 | 2 overly large files |
 ```
 
-### Step 4: 生成清理 PR
+### Step 4: Generate Cleanup PR
 
-针对发现的问题，生成针对性的修复 PR：
+Generate targeted fix PRs for discovered issues:
 
-- 每个 PR 聚焦单一问题
-- PR 描述包含：问题说明、修复方案、影响范围
-- PR 小到可以在 1 分钟内审查
+- Each PR focuses on a single issue
+- PR description includes: problem description, fix approach, impact scope
+- PRs small enough to review in 1 minute
 
-### Step 5: 更新 tech-debt-tracker
+### Step 5: Update tech-debt-tracker
 
-将发现的技术债务记录到 `docs/exec-plans/tech-debt-tracker.md`：
+Record discovered technical debt in `docs/exec-plans/tech-debt-tracker.md`:
 
 ```markdown
 ## Tech Debt Tracker
 
-| ID | 描述 | 严重程度 | 发现日期 | 状态 |
+| ID | Description | Severity | Discovery Date | Status |
 |----|------|----------|----------|------|
-| TD-001 | {描述} | {高/中/低} | {日期} | {待修复/修复中/已修复} |
+| TD-001 | {description} | {high/medium/low} | {date} | {to fix/fixing/fixed} |
 ```
 
-## 输入/输出协议
+## Input/Output Protocol
 
-**输入：**
-- 项目代码库
+**Input:**
+- Project codebase
 - `docs/QUALITY_SCORE.md`
 - `docs/ARCHITECTURE.md`
 
-**输出：**
-- 漂移扫描报告
-- 质量评分更新
-- 清理 PR（如有必要）
-- `docs/exec-plans/tech-debt-tracker.md` 更新
+**Output:**
+- Drift scan report
+- Quality score updates
+- Cleanup PR (if needed)
+- `docs/exec-plans/tech-debt-tracker.md` updates
 
-## 可运行脚本
+## Runnable Scripts
 
 ```
 .claude/skills/entropy-gc/
 ├── SKILL.md
 └── scripts/
-    ├── drift-scan.sh    ← 漂移扫描（架构、文档、品味、工具）
-    └── quality-score.sh ← 质量评分（文件大小、债务、测试、文档）
+    ├── drift-scan.mjs    ← Drift scan (architecture, docs, taste, tools)
+    └── quality-score.mjs ← Quality scoring (file size, debt, tests, docs)
 ```
 
-### 快速开始
+### Quick Start
 
 ```bash
-# 每日快速扫描（架构漂移 + 文档过期）
-.claude/skills/entropy-gc/scripts/drift-scan.sh --quick
+# Daily quick scan (architecture drift + doc staleness)
+node .claude/skills/entropy-gc/scripts/drift-scan.mjs --quick
 
-# 每周完整扫描（所有维度）
-.claude/skills/entropy-gc/scripts/drift-scan.sh --full
+# Weekly full scan (all dimensions)
+node .claude/skills/entropy-gc/scripts/drift-scan.mjs --full
 
-# 生成质量评分
-.claude/skills/entropy-gc/scripts/quality-score.sh
+# Generate quality score
+node .claude/skills/entropy-gc/scripts/quality-score.mjs
 ```
 
-## 自动化配置
+## Automation Configuration
 
-### GitHub Actions（推荐）
+### GitHub Actions (Recommended)
 
 ```yaml
 # .github/workflows/entropy-gc.yml
 name: Entropy GC
 on:
   schedule:
-    - cron: '0 8 * * *'   # 每日 08:00 UTC — 快速扫描
-    - cron: '0 8 * * 1'   # 每周一 08:00 UTC — 完整扫描
+    - cron: '0 8 * * *'   # Daily 08:00 UTC — quick scan
+    - cron: '0 8 * * 1'   # Weekly Monday 08:00 UTC — full scan
   workflow_dispatch:
       scan_type:
-        description: '扫描类型'
+        description: 'Scan type'
         required: true
         default: 'quick'
         type: choice
@@ -144,12 +144,12 @@ jobs:
 
       - name: Drift scan
         run: |
-          .claude/skills/entropy-gc/scripts/drift-scan.sh ${{ steps.scan.outputs.mode }}
+          node .claude/skills/entropy-gc/scripts/drift-scan.mjs ${{ steps.scan.outputs.mode }}
 
       - name: Quality score
         if: steps.scan.outputs.mode == '--full'
         run: |
-          .claude/skills/entropy-gc/scripts/quality-score.sh
+          node .claude/skills/entropy-gc/scripts/quality-score.mjs
 
       - name: Upload reports
         if: always()
@@ -169,18 +169,18 @@ jobs:
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `[entropy-gc] 漂移检测报告 ${new Date().toISOString().split('T')[0]}`,
+              title: `[entropy-gc] Drift Detection Report ${new Date().toISOString().split('T')[0]}`,
               body: report,
               labels: ['entropy', 'tech-debt']
             });
 ```
 
-### 本地 Cron（可选）
+### Local Cron (Optional)
 
 ```bash
 # crontab -e
-# 每日快速扫描
-0 8 * * * cd /path/to/project && .claude/skills/entropy-gc/scripts/drift-scan.sh --quick
-# 每周完整扫描
-0 8 * * 1 cd /path/to/project && .claude/skills/entropy-gc/scripts/drift-scan.sh --full && .claude/skills/entropy-gc/scripts/quality-score.sh
+# Daily quick scan
+0 8 * * * cd /path/to/project && node .claude/skills/entropy-gc/scripts/drift-scan.mjs --quick
+# Weekly full scan
+0 8 * * 1 cd /path/to/project && node .claude/skills/entropy-gc/scripts/drift-scan.mjs --full && node .claude/skills/entropy-gc/scripts/quality-score.mjs
 ```

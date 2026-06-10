@@ -1,168 +1,195 @@
 ---
 name: harness-evolve
-description: 反馈驱动的 Harness 演进。收集执行反馈，持续改进 agents、skills、知识库。当用户说"改进 harness"、"演进"、"harness evolve"、"反馈整合"、"优化 agent 团队"时触发。也用于在每次 harness 执行后主动建议收集反馈。
+description: Feedback-driven Harness evolution. Collect feedback, improve agents/skills/knowledge. Triggers on "改进 harness", "演进", "harness evolve", "反馈整合", "优化 agent 团队".
 ---
 
-# Harness Evolve — 反馈驱动演进
+# Harness Evolve — Feedback-Driven Evolution
 
-## 核心理念
+## Core Philosophy
 
-**Harness 是演进系统，不是一次性产物。** 每次执行后收集反馈，持续改进 agents、skills 和知识库。
+**Harness is an evolving system, not a one-time artifact.** Collect feedback after each execution, continuously improve agents, skills, and knowledge base.
 
-## 执行流程
+## Execution Flow
 
-### Step 1: 反馈收集
+### Step 1: Feedback Collection
 
-每次 harness 执行后，询问用户：
+After each harness execution, ask the user:
 
-1. "结果有哪些部分需要改进？"
-2. "agent 团队组成或工作流程需要调整吗？"
-3. "有没有发现智能体重复犯的错误？"
+1. "Which parts of the results need improvement?"
+2. "Do the agent team composition or workflow need adjustment?"
+3. "Have you noticed any mistakes the agents repeatedly make?"
 
-**不强求反馈，但始终提供机会。**
+**Do not insist on feedback, but always provide the opportunity.**
 
-### Step 2: 反馈分类与路由
+### Step 2: Feedback Classification & Routing
 
-| 反馈类型 | 修改目标 | 示例 |
+| Feedback Type | Modification Target | Example |
 |----------|----------|------|
-| 输出质量 | 对应 agent 的 skill | "分析太浅" → 在 skill 中增加深度标准 |
-| Agent 角色 | Agent 定义 `.md` | "需要安全审查" → 新增 agent |
-| 工作流程 | Orchestrator skill | "验证应该前置" → 调整阶段顺序 |
-| 团队组成 | Orchestrator + agents | "这两个可以合并" → 合并 agent |
-| 触发缺失 | Skill 描述 | "这个表达没触发" → 扩展描述 |
+| Output Quality | Corresponding agent's skill | "Analysis too shallow" → Add depth criteria in skill |
+| Agent Role | Agent definition `.md` | "Need security review" → Add new agent |
+| Workflow | Orchestrator skill | "Verification should be earlier" → Adjust phase order |
+| Team Composition | Orchestrator + agents | "These two can be merged" → Merge agents |
+| Trigger Missing | Skill description | "This expression didn't trigger" → Expand description |
 
-### Step 3: 增量修改
+### Step 3: Incremental Modification
 
-**修改原则：**
-- 一次改一个地方
-- 修改后立即验证
-- 记录变更原因
+**Modification Principles:**
+- Change one place at a time
+- Verify immediately after modification
+- Record the reason for the change
 
-**修改流程：**
-1. 定位修改目标文件
-2. 读取现有内容
-3. 做出最小化修改
-4. 验证修改有效性
-5. 更新 CLAUDE.md 变更历史
+**Modification Process:**
+1. Locate the target file to modify
+2. Read existing content
+3. Make minimal modification
+4. Verify the modification is effective
+5. Update CLAUDE.md change history
 
-### Step 4: 变更历史
+### Step 4: Change History
 
-在 CLAUDE.md 的变更历史表中记录：
+Record in the CLAUDE.md change history table:
 
 ```markdown
 **Change History:**
 | Date | Change | Target | Reason |
 |------|--------|--------|--------|
 | 2026-01-01 | Initial configuration | All | - |
-| 2026-01-05 | 增加安全审查 agent | agents/security.md | 反馈：输出缺少安全审查 |
-| 2026-01-10 | 扩展触发描述 | skills/quality-gate | "检查质量"未触发 |
+| 2026-01-05 | Added security review agent | agents/security.md | Feedback: output lacked security review |
+| 2026-01-10 | Expanded trigger description | skills/quality-gate | "Check quality" did not trigger |
 ```
 
-### Step 5: 演进触发器
+### Step 5: Evolution Triggers
 
-**主动建议演进的情况：**
-- 同类反馈重复 2+ 次
-- 发现 agent 重复失败的模式
-- 用户观察到绕过 orchestrator 手动操作
-- 新的技术栈或工具引入
-- Terminal Bench 2.0 评分下降
+**Situations where proactive evolution suggestions are made:**
+- Same type of feedback repeats 2+ times
+- Agent repeated failure patterns discovered
+- User observed manual operations bypassing orchestrator
+- New tech stack or tools introduced
+- Terminal Bench 2.0 score decline
 
-### Step 6: 评估基准
+### Step 6: Evaluation Benchmark
 
-**Terminal Bench 2.0 自动化：**
+**Terminal Bench 2.0 Automation:**
 
-使用 Terminal Bench 2.0 评估 harness 配置效果：
+Use Terminal Bench 2.0 to evaluate harness configuration effectiveness:
 
-| 评估维度 | 说明 | 权重 |
+| Evaluation Dimension | Description | Weight |
 |----------|------|------|
-| 任务完成率 | 成功完成的任务比例 | 40% |
-| 代码质量 | 生成代码的正确性、可维护性 | 30% |
-| 执行效率 | 完成任务所需时间和 token | 20% |
-| 错误恢复 | 遇到错误时的恢复能力 | 10% |
+| Task Completion Rate | Ratio of successfully completed tasks | 40% |
+| Code Quality | Correctness and maintainability of generated code | 30% |
+| Execution Efficiency | Time and tokens consumed to complete tasks | 20% |
+| Error Recovery | Ability to recover from errors | 10% |
 
-**自动化评估流程：**
-1. 从 Terminal Bench 2.0 选择标准测试任务集
-2. 在当前 harness 配置下运行 `node .claude/skills/harness-evolve/scripts/run-benchmark.mjs`
-3. 自动收集评分和瓶颈分析
-4. 生成对比报告（当前 vs 历史跑分）
-5. 评分下降时自动触发演进建议
+**Automated Evaluation Process:**
+1. Select standard test task sets from Terminal Bench 2.0
+2. Run under current harness configuration: `node .claude/skills/harness-evolve/scripts/run-benchmark.mjs`
+3. Automatically collect scores and bottleneck analysis
+4. Generate comparison report (current vs historical scores)
+5. Automatically trigger evolution suggestions when scores decline
 
-**关键认知：** 同一模型在不同 harness 中表现差异显著。Opus 4.6 在 Claude Code 中的评分远低于在其他 harness 中的评分。持续优化 harness 是提升 agent 性能的关键。
+**Key Insight:** The same model performs significantly differently across different harnesses. Opus 4.6 scores much lower in Claude Code than in other harnesses. Continuously optimizing harness is key to improving agent performance.
 
-### Step 7: 操作/维护工作流
+### Step 7: Operations/Maintenance Workflow
 
-对已有 harness 进行系统性检查、修改和同步：
+Perform systematic checks, modifications, and synchronization on existing harness:
 
-1. **状态审计**：对比 agent/skill 文件与 orchestrator 定义的一致性
-2. **增量修改**：按用户请求增删改，每次修改后立即同步
-3. **更新历史**：记录变更到 CLAUDE.md
-4. **变更验证**：结构检查 + 触发验证（如影响触发）
+1. **Status Audit**: Compare agent/skill files against orchestrator definitions for consistency
+2. **Incremental Modification**: Add, remove, or change per user requests; synchronize immediately after each modification
+3. **Update History**: Record changes in CLAUDE.md
+4. **Change Verification**: Structural check + trigger verification (if triggers are affected)
 
-### Step 8: Trace 自分析
+### Step 8: Trace Self-Analysis
 
-**用途：** 分析 agent 执行 trace 以识别和修复 harness 级别的故障模式。
+**Purpose:** Analyze agent execution traces to identify and fix harness-level failure patterns.
 
-**分析流程：**
-1. 加载 `.workspace/trace/` 中的最近 N 次执行日志
-2. 扫描失败模式：
-   - 重复出现的相同错误类型
-   - 某 tool 调用持续超时 → 可能需调整超时或替代工具
-   - 某 phase 频繁中断 → 可能需增加 context 或调整步骤分解
-   - 同一文件被反复编辑 → 可能存在上下文腐烂
-3. 生成故障模式报告，自动路由到对应 target：
-   - Tool 问题 → 调整 `hooks-framework` 脚本
-   - Phase 问题 → 调整 `harness-orchestrator` 编排
-   - Context 问题 → 调整 `context-setup` 或压缩策略
-4. 提出修复建议（含具体文件:行号）
+**Analysis Process:**
+1. Load the most recent N execution logs from `.workspace/trace/`
+2. Scan for failure patterns:
+   - Same error type appearing repeatedly
+   - Certain tool calls consistently timing out → may need timeout adjustment or alternative tool
+   - Certain phases frequently interrupted → may need increased context or step decomposition adjustment
+   - Same file repeatedly edited → possible context rot
+   - Agent repeatedly failing at the same step → may need prompt or tool adjustment
+3. Generate failure pattern report, auto-route to corresponding target:
+   - Tool issues → Adjust `hooks-framework` scripts
+   - Phase issues → Adjust `harness-orchestrator` orchestration
+   - Context issues → Adjust `context-setup` or compaction strategy
+   - Prompt issues → Adjust agent definition files
+4. Propose fix suggestions (including specific file:line numbers)
 
-**自动化触发：**
-- 每次 harness 执行后自动运行
-- 累计 3 次相同错误模式 → 主动通知用户
-- Terminal Bench 评分下降 >10% → 强制全链路分析
+**Automated Triggers:**
+- Run automatically after each harness execution
+- Accumulated 3 identical error patterns → Proactively notify user
+- Terminal Bench score decline >10% → Mandatory full-chain analysis
 
-### Step 9: Harness A/B 测试
+### Step 9: Dynamic Tool Assembly (Evolution Direction)
 
-**用途：** 对比不同 harness 配置的效果，选择最优方案。
+**Core Insight:** Current harness uses a pre-configured model—tools and context are determined at startup. The future trend is dynamically assembling the most suitable tools and context based on the specific task at hand.
 
-**A/B 测试流程：**
-1. 定义 Harness 变体：
+**Evolution Path:**
+
+| Stage | Model | Description |
+|------|------|------|
+| Current | Pre-configured | Load all tools and skills at startup |
+| Near-term | On-demand loading | Selectively load tools based on task type |
+| Future | Dynamic assembly | Assemble optimal tool set in real-time based on task |
+
+**Implementation Approach:**
+1. **Task Classifier**: Analyze user requests, identify required capabilities (code generation, testing, browser, search, etc.)
+2. **Tool Selector**: Select optimal combination from available tool pool
+3. **Context Injector**: Only inject task-relevant context and skills
+4. **Feedback Loop**: Adjust tool selection strategy based on execution results
+
+**Current Preparations:**
+- Add `capabilities` tags in skill front-matter (e.g. `["code-gen", "testing", "browser"]`)
+- Implement simple task→tool mapping in orchestrator
+- Collect historical data on task types and tool usage
+
+**Value:** Reduce context footprint, improve agent response speed, lower token consumption.
+
+### Step 9: Harness A/B Testing
+
+**Purpose:** Compare effectiveness of different harness configurations to select the optimal approach.
+
+**A/B Testing Process:**
+1. Define Harness variants:
    ```
-   Variant A: 当前配置（基线）
-   Variant B: 修改某一维度（如增加 apply_patch 工具）
+   Variant A: Current configuration (baseline)
+   Variant B: Modify one dimension (e.g. add apply_patch tool)
    ```
-2. 在相同任务集上并行运行两个变体
-3. 对比指标：
-   | 指标 | 测量方式 |
+2. Run both variants in parallel on the same task set
+3. Compare metrics:
+   | Metric | Measurement Method |
    |------|----------|
-   | 任务完成率 | Terminal Bench 评分 |
-   | Token 消耗 | 总计 + 每次操作均值 |
-   | 执行时间 | 墙钟时间 |
-   | 错误恢复次数 | 从 trace 提取 |
-   | 用户修正次数 | 从 feedback 提取 |
-4. 生成对比报告（`.workspace/benchmark/comparison.html`）
-5. 变体 B 优于 A → 建议合并；劣于 A → 分析原因
+   | Task Completion Rate | Terminal Bench score |
+   | Token Consumption | Total + per-operation average |
+   | Execution Time | Wall clock time |
+   | Error Recovery Count | Extracted from trace |
+   | User Correction Count | Extracted from feedback |
+4. Generate comparison report (`.workspace/benchmark/comparison.html`)
+5. Variant B outperforms A → Suggest merge; underperforms A → Analyze cause
 
-**配置变体维度（可独立 A/B 测试）：**
-- Tool 集合（增加/移除某 tool）
-- 压缩策略（阈值、摘要方式）
-- 并行度（子代理数量）
-- reasoning_effort 级别
+**Configurable Variant Dimensions (independently A/B testable):**
+- Tool set (add/remove a tool)
+- Compaction strategy (threshold, summarization method)
+- Parallelism (number of sub-agents)
+- reasoning_effort level
 
-## 输入/输出协议
+## Input/Output Protocol
 
-**输入：**
-- 用户反馈
-- 执行日志
-- 当前 harness 配置
+**Input:**
+- User feedback
+- Execution logs
+- Current harness configuration
 
-**输出：**
-- 修改后的 agent/skill 文件
-- 更新的 CLAUDE.md 变更历史
-- 演进报告
+**Output:**
+- Modified agent/skill files
+- Updated CLAUDE.md change history
+- Evolution report
 
-## 质量标准
+## Quality Standards
 
-- 每次变更记录原因
-- 变更后验证一致性
-- 不引入新的冲突
-- 变更历史完整可追溯
+- Record reason for each change
+- Verify consistency after changes
+- Do not introduce new conflicts
+- Change history is complete and traceable

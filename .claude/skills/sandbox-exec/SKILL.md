@@ -1,196 +1,196 @@
 ---
 name: sandbox-exec
-description: 安全代码执行环境。配置沙箱、命令白名单、网络隔离，使智能体可安全运行代码。当用户说"沙箱"、"安全执行"、"sandbox"、"代码隔离"、"安全运行"时触发。也用于调整沙箱安全策略。
+description: Secure code execution environment. Sandbox, command allowlists, network isolation. Triggers on "沙箱", "安全执行", "sandbox", "代码隔离", "安全运行", "安全隔离".
 ---
 
-# Sandbox Exec — 安全代码执行环境
+# Sandbox Exec — Secure Code Execution Environment
 
-## 核心理念
+## Core Philosophy
 
-**智能体需要安全的操作环境。** 运行智能体生成的代码有风险，沙箱提供隔离执行环境，支持按需创建、扇出执行、任务完成后销毁。
+**Agents need a safe execution environment.** Running agent-generated code carries risk. Sandboxes provide isolated execution environments, supporting on-demand creation, fan-out execution, and destruction after task completion.
 
-**Bash 是通用执行引擎。** Bash + Code 执行是智能体自主解决问题的关键：
-- **自主工具创建**：模型可动态设计自己的工具，而不是受限于预配置的工具集
-- **通用问题解决**：给模型"一台计算机"，让它自己想办法
-- **代码即工具**：模型可通过编写和执行代码来解决任意问题
+**Bash is the universal execution engine.** Bash + Code execution is key to autonomous agent problem-solving:
+- **Autonomous tool creation**: Models can dynamically design their own tools, rather than being limited to a pre-configured toolset
+- **General problem solving**: Give the model "a computer" and let it figure things out
+- **Code as tool**: Models can solve arbitrary problems by writing and executing code
 
-**Git 是版本控制原语。** Git 为文件系统添加版本控制能力：
-- **工作跟踪**：智能体可跟踪工作进度和历史
-- **错误回滚**：出错时可回滚到之前的状态
-- **分支实验**：支持在独立分支上尝试不同方案
-- **多智能体协作**：多个智能体可通过 git 协调工作
+**Git is the version control primitive.** Git adds version control capabilities to the filesystem:
+- **Work tracking**: Agents can track work progress and history
+- **Error rollback**: Roll back to previous state on errors
+- **Branch experimentation**: Support trying different approaches on independent branches
+- **Multi-agent collaboration**: Multiple agents can coordinate work through git
 
-## Shell 工具规范
+## Shell Tool Specification
 
-**Bash 是通用执行引擎，但裸 bash 调用不可控。** 基于 OpenAI Codex 的 `shell_command` 标准，定义统一的 Shell 工具接口。
+**Bash is the universal execution engine, but raw bash calls are uncontrollable.** Based on OpenAI Codex's `shell_command` standard, define a unified Shell tool interface.
 
-### 标准 Shell 工具 Schema
+### Standard Shell Tool Schema
 
 ```json
 {
   "name": "shell_command",
-  "description": "在用户默认 shell 中执行命令并返回输出。始终设置 workdir 参数，避免在命令字符串中使用 cd。",
+  "description": "Execute a command in the user's default shell and return output. Always set the workdir parameter; avoid using cd in command strings.",
   "parameters": {
-    "command": "要执行的 shell 命令（string，非数组）",
-    "workdir": "工作目录（推荐始终设置）",
-    "timeout_ms": "超时毫秒数（默认 120000）",
-    "with_escalated_permissions": "是否需要沙箱外权限（bool）",
-    "justification": "提升权限的原因（仅 with_escalated_permissions=true 时需要）"
+    "command": "Shell command to execute (string, not array)",
+    "workdir": "Working directory (recommended to always set)",
+    "timeout_ms": "Timeout in milliseconds (default 120000)",
+    "with_escalated_permissions": "Whether out-of-sandbox permissions are needed (bool)",
+    "justification": "Reason for elevated permissions (required only when with_escalated_permissions=true)"
   }
 }
 ```
 
-### 专用终端封装工具指导
+### Guidance on Dedicated Terminal Wrapper Tools
 
-当需要限制模型使用裸终端时，创建与底层命令一致的专用工具：
+When limiting the model's access to raw terminal, create dedicated tools consistent with underlying commands:
 
-- **工具名与输出格式贴近原生命令**：如 `list_dir` 而非 `terminal('ls')`
-- **参数和返回格式与命令对齐**：模型主要用终端工具训练，贴近原生命令可保持分布一致
-- **Prompt 中声明优先使用专用工具**：如 "git 操作请使用 `git` 工具而非 `shell_command`"
+- **Tool names and output formats mirror native commands**: e.g., `list_dir` instead of `terminal('ls')`
+- **Parameters and return formats align with commands**: Models are primarily trained on terminal tools; staying close to native commands preserves distribution alignment
+- **Declare in prompts to prefer dedicated tools**: e.g., "for git operations, please use the `git` tool rather than `shell_command`"
 
-### 专用 Git 工具示例
+### Dedicated Git Tool Example
 
 ```json
 {
   "name": "git",
-  "description": "执行 git 命令。用法与 git CLI 一致。",
+  "description": "Execute git commands. Usage matches the git CLI.",
   "parameters": {
-    "command": "git 命令字符串（如 'status'、'diff'、'log --oneline'）",
-    "workdir": "仓库根目录路径"
+    "command": "Git command string (e.g. 'status', 'diff', 'log --oneline')",
+    "workdir": "Repository root directory path"
   }
 }
 ```
 
-### view_image 工具
+### view_image Tool
 
-标准图像查看工具，用于验证 UI 截图、设计稿、图表等：
+Standard image viewing tool for verifying UI screenshots, design mockups, diagrams, etc.:
 
 ```json
 {
   "name": "view_image",
-  "description": "将本地图像文件加载到对话上下文中供模型查看。",
+  "description": "Load a local image file into the conversation context for the model to view.",
   "parameters": {
-    "path": "图像文件的本地文件系统路径"
+    "path": "Local filesystem path to the image file"
   }
 }
 ```
 
-## 浏览器工具封装
+## Browser Tool Encapsulation
 
-浏览器是核心捆绑基础设施。当前 Dockerfile 中已安装 Chromium，需要进一步封装为 agent 可直接调用的工具。
+The browser is core bundled infrastructure. Chromium is already installed in the current Dockerfile and needs further encapsulation as a tool agents can directly invoke.
 
-### 浏览器工具 Schema（Playwright 封装）
+### Browser Tool Schema (Playwright encapsulation)
 
 ```json
 {
   "name": "browser",
-  "description": "使用无头浏览器执行 Web 操作。支持导航、截图、DOM 查询、表单交互。",
+  "description": "Execute web operations using a headless browser. Supports navigation, screenshots, DOM queries, form interaction.",
   "parameters": {
     "action": "navigate | screenshot | click | type | evaluate | pdf",
-    "url": "目标 URL（navigate 时必填）",
-    "selector": "CSS 选择器（click/type/evaluate 时必填）",
-    "value": "输入值或 JavaScript 代码（type/evaluate 时必填）",
-    "full_page": "是否全页截图（bool，默认 false）"
+    "url": "Target URL (required for navigate)",
+    "selector": "CSS selector (required for click/type/evaluate)",
+    "value": "Input value or JavaScript code (required for type/evaluate)",
+    "full_page": "Whether to take full-page screenshot (bool, default false)"
   }
 }
 ```
 
-### 典型使用场景
+### Typical Usage Scenarios
 
-| 场景 | 操作 | 用途 |
+| Scenario | Operation | Purpose |
 |------|------|------|
-| UI 验证 | `screenshot` | 截取页面完整或局部截图，视觉回归对比 |
-| 表单交互 | `navigate` + `type` + `click` | 自动化用户流程、端到端测试 |
-| DOM 检查 | `evaluate` | 执行 JS 获取页面状态、性能指标 |
-| 网络监控 | `evaluate` | 拦截网络请求、验证 API 调用 |
-| PDF 报告 | `pdf` | 生成页面 PDF 作为证据附件 |
+| UI verification | `screenshot` | Capture full or partial page screenshots, visual regression comparison |
+| Form interaction | `navigate` + `type` + `click` | Automate user flows, end-to-end testing |
+| DOM inspection | `evaluate` | Execute JS to get page state, performance metrics |
+| Network monitoring | `evaluate` | Intercept network requests, verify API calls |
+| PDF reports | `pdf` | Generate page PDF as evidence attachments |
 
-### 浏览器安全
+### Browser Security
 
-- 始终在沙箱容器内运行（网络隔离 + 只读文件系统）
-- 禁止访问 localhost 和内部网络地址
-- 浏览器进程任务完成后自动终止（timeout 60s）
+- Always run inside sandbox container (network isolation + read-only filesystem)
+- Prohibit access to localhost and internal network addresses
+- Browser processes auto-terminate after task completion (timeout 60s)
 
-### Computer Use 工具
+### Computer Use Tool
 
-**Computer Use** 是浏览器、Shell 和截图的组合能力——agent 可像人类一样操作 GUI 界面。
+**Computer Use** is the combined capability of browser, shell, and screenshot — agents can operate GUI interfaces like a human.
 
 ```json
 {
   "name": "computer_use",
-  "description": "模拟人类操作计算机：查看屏幕、移动鼠标、点击、键入。用于 GUI 应用交互和自动化测试。",
+  "description": "Simulate human computer operation: view screen, move mouse, click, type. Used for GUI application interaction and automated testing.",
   "parameters": {
     "action": "screenshot | click | type | key | mouse_move | scroll | wait",
-    "x": "鼠标 X 坐标（click/mouse_move 时必填）",
-    "y": "鼠标 Y 坐标（click/mouse_move 时必填）",
-    "text": "键入文本（type 时必填）",
-    "keys": "组合键如 'Enter'、'Ctrl+C'（key 时必填）"
+    "x": "Mouse X coordinate (required for click/mouse_move)",
+    "y": "Mouse Y coordinate (required for click/mouse_move)",
+    "text": "Text to type (required for type)",
+    "keys": "Key combination like 'Enter', 'Ctrl+C' (required for key)"
   }
 }
 ```
 
-**适用场景：**
-- **GUI 应用测试**：操作非 Web 的桌面应用（通过 VNC）
-- **验收测试**：录制 + 回放用户交互序列
-- **无障碍验证**：Tab 导航 + 屏幕阅读器兼容性
-- **安装向导**：自动化软件安装流程
+**Applicable scenarios:**
+- **GUI application testing**: Operate non-web desktop applications (via VNC)
+- **Acceptance testing**: Record + replay user interaction sequences
+- **Accessibility verification**: Tab navigation + screen reader compatibility
+- **Installation wizards**: Automate software installation processes
 
-**安全约束：**
-- Computer Use 仅在高安全级别沙箱中启用（`network_mode: none`）
-- 交互序列有硬超时（30s/步）
-- 执行前截图 → 执行 → 执行后截图，全程审计
+**Security constraints:**
+- Computer Use is only enabled in high-security sandboxes (`network_mode: none`)
+- Interaction sequences have a hard timeout (30s per step)
+- Screenshot before execution → Execute → Screenshot after execution, fully audited
 
-## 质量标准
+## Quality Standards
 
-- 沙箱容器启动时间 < 60s
-- 命令白名单覆盖所有必要开发工具
-- 沙箱间完全网络隔离（`network_mode: none`）
-- 任务完成后沙箱自动销毁（无残留容器）
-- 浏览器进程超时 60s 自动终止
+- Sandbox container startup time < 60s
+- Command allowlist covers all necessary development tools
+- Complete network isolation between sandboxes (`network_mode: none`)
+- Sandbox auto-destroyed after task completion (no residual containers)
+- Browser process auto-terminated after 60s timeout
 
-## 执行流程
+## Execution Flow
 
-### Step 1: 环境需求分析
+### Step 1: Environment requirements analysis
 
-1. 识别项目语言和运行时需求
-2. 确定需要的 CLI 工具（git, npm, pytest 等）
-3. 确定网络访问需求
-4. 确定安全级别
+1. Identify project language and runtime requirements
+2. Determine required CLI tools (git, npm, pytest, etc.)
+3. Determine network access requirements
+4. Determine security level
 
-### Step 2: 配置沙箱容器
+### Step 2: Configure sandbox container
 
 ```dockerfile
 FROM ubuntu:22.04
 
-# 基础工具
+# Base tools
 RUN apt-get update && apt-get install -y \
     git curl wget \
     python3 python3-pip \
     nodejs npm \
     && rm -rf /var/lib/apt/lists/*
 
-# 浏览器（用于 UI 验证和 web 交互）
+# Browser (for UI verification and web interaction)
 RUN apt-get update && apt-get install -y \
     chromium-browser \
     chromium-chromedriver \
     && rm -rf /var/lib/apt/lists/*
 
-# 安全配置
+# Security configuration
 RUN useradd -m agent
 USER agent
 WORKDIR /workspace
 
-# 命令白名单
+# Command allowlist
 COPY allowed-commands.txt /etc/allowed-commands.txt
 ```
 
-**浏览器用途：**
-- **UI 验证**：截图、DOM 快照、视觉回归测试
-- **Web 交互**：自动化用户流程、表单填写
-- **网络观察**：监控网络请求、API 调用
-- **录屏证据**：录制故障/修复演示视频
+**Browser use cases:**
+- **UI verification**: Screenshots, DOM snapshots, visual regression testing
+- **Web interaction**: Automated user flows, form filling
+- **Network observation**: Monitor network requests, API calls
+- **Screen recording evidence**: Record failure/fix demonstration videos
 
-### Step 3: 命令白名单
+### Step 3: Command allowlist
 
 ```bash
 # allowed-commands.txt
@@ -208,15 +208,15 @@ grep
 find
 ```
 
-### Step 4: 网络隔离
+### Step 4: Network isolation
 
 ```yaml
 # docker-compose.sandbox.yml
 services:
   sandbox:
     build: .
-    network_mode: "none"  # 完全隔离
-    # 或使用自定义网络限制访问
+    network_mode: "none"  # Complete isolation
+    # Or use a custom network to restrict access
     # networks:
     #   - sandbox-net
     volumes:
@@ -225,37 +225,37 @@ services:
       - /tmp:size=512M
 ```
 
-### Step 5: Git Worktree 隔离
+### Step 5: Git Worktree isolation
 
-每个任务使用独立的 git worktree，避免状态污染：
+Each task uses an independent git worktree to avoid state pollution:
 
 ```bash
-# 为任务创建独立 worktree
+# Create an independent worktree for the task
 WORKTREE=".worktrees/task-$(date +%s)"
 git worktree add "$WORKTREE" -b "task-$(date +%s)"
 
-# 在 worktree 中启动沙箱
+# Start sandbox in the worktree
 docker run --rm \
   -v "$(pwd)/$WORKTREE":/workspace \
   --network none \
   sandbox-image \
   bash -c "cd /workspace && npm test"
 
-# 任务完成后清理
+# Clean up after task completion
 git worktree remove "$WORKTREE"
 ```
 
-**优势：**
-- 每个任务有独立的工作目录和分支
-- 多个任务可并行执行，互不干扰
-- 任务完成后 worktree 可销毁，不留残留状态
+**Advantages:**
+- Each task has an independent working directory and branch
+- Multiple tasks can run in parallel without interference
+- Worktrees can be destroyed after task completion, leaving no residual state
 
-### Step 6: 智能体集成
+### Step 6: Agent integration
 
-为智能体提供沙箱执行工具：
+Provide sandbox execution tools for agents:
 
 ```bash
-# 在沙箱中执行命令
+# Execute commands in the sandbox
 docker run --rm \
   -v $(pwd):/workspace \
   --network none \
@@ -263,23 +263,23 @@ docker run --rm \
   bash -c "cd /workspace && npm test"
 ```
 
-## 安全策略
+## Security Policy
 
-| 级别 | 网络 | 命令 | 文件系统 | 适用场景 |
+| Level | Network | Commands | Filesystem | Applicable Scenarios |
 |------|------|------|----------|----------|
-| 低 | 允许 | 无限制 | 可写 | 开发环境 |
-| 中 | 白名单 | 白名单 | 可写 | 测试环境 |
-| 高 | 禁止 | 白名单 | 只读+工作区 | 生产验证 |
+| Low | Allowed | Unlimited | Writable | Development environment |
+| Medium | Allowlist | Allowlist | Writable | Test environment |
+| High | Blocked | Allowlist | Read-only + workspace | Production verification |
 
-## 输入/输出协议
+## Input/Output Protocol
 
-**输入：**
-- 项目技术栈
-- 安全级别需求
-- 网络访问需求
+**Input:**
+- Project tech stack
+- Security level requirements
+- Network access requirements
 
-**输出：**
+**Output:**
 - Dockerfile
 - docker-compose.sandbox.yml
-- 命令白名单
-- 安全策略文档
+- Command allowlist
+- Security policy documentation
