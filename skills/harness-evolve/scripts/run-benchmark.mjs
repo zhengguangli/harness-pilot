@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { getWorkspaceDir } from '../../../../scripts/lib/workspace.mjs'
+import { getWorkspaceDir } from '../../../scripts/lib/workspace.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const PROJECT_ROOT = process.env.CLAUDE_PROJECT_DIR || process.env.CODEX_PROJECT_DIR || process.env.OPENCODE_PROJECT_DIR || process.env.PROJECT_DIR || join(__dirname, '..', '..', '..', '..', '..')

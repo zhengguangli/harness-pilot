@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from 'fs'
 import { join, extname, relative, basename } from 'path'
-import { getWorkspaceDir } from '../../../../scripts/lib/workspace.mjs'
+import { getWorkspaceDir } from '../../../scripts/lib/workspace.mjs'
 
 // 文件大小阈值
 const THRESHOLDS = {

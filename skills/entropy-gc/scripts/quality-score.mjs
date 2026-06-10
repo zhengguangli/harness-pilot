@@ -14,7 +14,7 @@ import { execSync } from 'child_process';
 import { mkdirSync, writeFileSync, existsSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { globSync } from 'fs';
-import { getWorkspaceDir } from '../../../../scripts/lib/workspace.mjs';
+import { getWorkspaceDir } from '../../../scripts/lib/workspace.mjs';
 
 const REPORT_FILE = process.env.REPORT_FILE || `${getWorkspaceDir()}/quality-score-${getDateStr()}.md`;
 

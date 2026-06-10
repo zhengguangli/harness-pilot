@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from 'fs'
 import { join, extname, relative, basename } from 'path'
-import { getWorkspaceDir } from '../../../../scripts/lib/workspace.mjs'
+import { getWorkspaceDir } from '../../../scripts/lib/workspace.mjs'
 
 function findFiles(dir, exts, maxDepth = 5) {
   const results = []

@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from 'fs'
 import { join, extname, relative, basename } from 'path'
-import { getWorkspaceDir } from '../../../../scripts/lib/workspace.mjs'
+import { getWorkspaceDir } from '../../../scripts/lib/workspace.mjs'
 
 const LAYERS = ['types', 'config', 'repo', 'service', 'runtime', 'ui', 'components', 'pages', 'app']
 

@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from 'fs'
 import { join, extname, basename, relative } from 'path'
-import { getWorkspaceDir } from '../../../../scripts/lib/workspace.mjs'
+import { getWorkspaceDir } from '../../../scripts/lib/workspace.mjs'
 
 // 命名约定规则
 const RULES = {
