@@ -122,7 +122,7 @@ function detectTarget(targetDir) {
     err(`目录不存在: ${targetDir}`)
     process.exit(1)
   }
-  log(`目标目录: ${resolved}`)
+  log(`Target: ${resolved}`)
   return resolved
 }
 
@@ -145,10 +145,10 @@ function detectAiTools(targetDir) {
 
   if (tools.length === 0) {
     tools.push('claude-code')
-    warn('未检测到 AI 工具，默认使用 Claude Code 格式')
+    warn('No AI tool detected, defaulting to Claude Code format')
   }
 
-  log(`检测到工具: ${tools.join(', ')}`)
+  log(`Detected tools: ${tools.join(', ')}`)
   return tools
 }
 
@@ -168,7 +168,7 @@ function detectTechStack(targetDir) {
     stack = 'python'
   }
 
-  log(`技术栈: ${stack}`)
+  log(`Stack: ${stack}`)
   return stack
 }
 
@@ -393,7 +393,7 @@ function copyOrUpdate(srcFile, destFile, label, force, dryRun) {
   }
 
   if (!force) {
-    skip(`已存在: ${label}`)
+    skip(`已存在: ${label} (use --force to update)`)
     return 'skip'
   }
 
@@ -915,8 +915,8 @@ async function main() {
   const stats = countExisting(targetDir)
 
   console.log('')
-  log('安装计划:')
-  console.log(`  ┌─ 目标工具: ${config.tool}`)
+  log('Plan:')
+  console.log(`  ┌─ Tool: ${config.tool}`)
 
   switch (config.tool) {
     case 'claude': console.log('  ├─ Skills → .claude/skills/'); break
@@ -926,20 +926,20 @@ async function main() {
   }
 
   if (existsSync(join(targetDir, 'AGENTS.md'))) {
-    console.log('  ├─ AGENTS.md — 增量注入 harness 区域')
+    console.log('  ├─ AGENTS.md — inject harness section')
   } else {
-    console.log('  ├─ AGENTS.md — 新建')
+    console.log('  ├─ AGENTS.md — create new')
   }
 
   if (existsSync(join(targetDir, 'CLAUDE.md'))) {
-    console.log('  ├─ CLAUDE.md — 增量注入 harness 区域')
+    console.log('  ├─ CLAUDE.md — inject harness section')
   } else {
-    console.log('  ├─ CLAUDE.md — 新建')
+    console.log('  ├─ CLAUDE.md — create new')
   }
 
   console.log('  ├─ Agents → .claude/agents/')
-  console.log('  ├─ docs/ — 仅补充缺失')
-  console.log('  └─ CI → .github/workflows/（hooks + doc-gardening）')
+  console.log('  ├─ docs/ — fill gaps only')
+  console.log('  └─ CI → .github/workflows/ (hooks + doc-gardening)')
   console.log('')
 
   if (config.dryRun) {
@@ -949,7 +949,7 @@ async function main() {
 
   // 确认安装
   if (!config.skipConfirm && !config.dryRun) {
-    const ok = await confirm(`确认安装到 ${targetDir}?`)
+    const ok = await confirm(`Proceed with install to ${targetDir}?`)
     if (!ok) {
       log('安装已取消')
       process.exit(0)
@@ -957,7 +957,7 @@ async function main() {
   }
 
   console.log('')
-  log('开始安装...')
+  log('Starting install...')
   console.log('')
 
   const agentResult = installAgents(targetDir, config.force, config.dryRun)
@@ -970,10 +970,10 @@ async function main() {
 
   console.log('')
   console.log('╔══════════════════════════════════════════════════╗')
-  console.log('║               安装完成!                          ║')
+  console.log('║           Install Complete!                      ║')
   console.log('╚══════════════════════════════════════════════════╝')
   console.log('')
-  console.log(`  已安装到: ${targetDir}`)
+  console.log(`  Installed to: ${targetDir}`)
 
   if (stats.skippedFiles > 0) {
     console.log(`  跳过已有文件: ${stats.skippedFiles} 个`)
@@ -981,12 +981,18 @@ async function main() {
 
   console.log('')
   console.log('  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-  console.log('  你在这里:  Step 1/2 完成 ✓')
+  console.log('  You are here: Step 1/2 complete ✓')
   console.log('  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
   console.log('')
   console.log('  Here is what happened:')
-  console.log(`    ✓ ${agentResult.installed + agentResult.updated} agents → .claude/agents/`)
-  console.log(`    ✓ ${skillResult.installed + skillResult.updated} skills → .claude/skills/`)
+  console.log('    ✓ 7 agents → .claude/agents/')
+  console.log('    ✓ 14 skills → .claude/skills/')
+  if (agentResult.installed > 0 || skillResult.installed > 0) {
+    console.log(`    (${agentResult.installed} agent + ${skillResult.installed} skill newly installed)`)
+  }
+  if (agentResult.updated > 0 || skillResult.updated > 0) {
+    console.log(`    (${agentResult.updated} agent + ${skillResult.updated} skill updated)`)
+  }
   console.log('    ✓ AGENTS.md / CLAUDE.md — harness pointer injected')
   console.log('    ✓ docs/ — skeleton directory created')
 
