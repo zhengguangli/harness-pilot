@@ -295,68 +295,15 @@ function injectSection(file, label, content, dryRun) {
 // ============================================================================
 function installAgentsMd(targetDir, tool, dryRun) {
   const file = join(targetDir, 'AGENTS.md')
+  const templateFile = join(SCRIPT_DIR, '..', 'templates', 'AGENTS.md')
 
-  // 根据工具类型确定路径
-  const pathsMap = {
-    claude: { agents: '.claude/agents', skills: '.claude/skills' },
-    codex: { agents: '.agents/agents', skills: '.agents/skills' },
-    opencode: { agents: '.opencode/agents', skills: '.opencode/skills' }
+  if (!existsSync(templateFile)) {
+    err(`Template not found: ${templateFile}`)
+    return 0
   }
-  const paths = pathsMap[tool] || pathsMap.claude
 
-  const harnessSection = `## Architecture Map
-- See [CLAUDE.md](CLAUDE.md) — main project doc and harness pointer
-- Agent definitions: \`${paths.agents}/\` — 7 specialized agents
-- Skill definitions: \`${paths.skills}/\` — 14 standard skills
-- Install script: \`scripts/install.mjs\` — unified installer
-
-## Key Constraints
-- **Humans steer, agents execute** — engineer designs environment, AI writes code
-- **Repo = system of record** — knowledge outside repo doesn't exist to agents
-- **Map, not manual** — AGENTS.md is TOC, not encyclopedia
-- **Constraints = multipliers** — rigid architecture boundaries enable speed
-
-## Agent Team
-
-| Agent | Role |
-|-------|------|
-| orchestrator | Team coordinator, manages task dispatch and phase transitions |
-| architect | Architecture designer, defines layer boundaries and taste invariants |
-| builder | Code generator, produces implementation within constraints |
-| reviewer | Quality reviewer, code review and taste validation |
-| qa | Verification engineer, testing and trigger checks |
-| sre | Site reliability engineer, observability and entropy management |
-| context-engineer | Context engineer, knowledge architecture management |
-
-## Skills
-
-| Skill | Purpose |
-|-------|---------|
-| harness-orchestrator | Team orchestrator, coordinates all agents |
-| harness-init | One-click harness init |
-| context-setup | Knowledge base architecture generation |
-| architecture-guard | Architecture boundary enforcement |
-| entropy-gc | Entropy management & garbage collection |
-| observability-setup | Observability stack config |
-| sandbox-exec | Secure code execution environment |
-| quality-gate | Quality review gate |
-| agent-readability | Agent readability optimization |
-| harness-evolve | Feedback-driven evolution |
-| hooks-framework | Deterministic execution hooks |
-| web-search | Web search integration |
-| mcp-connector | MCP tool connector |
-| tool-search | Dynamic tool discovery |
-
-## Navigation
-- New project init? Use \`harness-init\` or \`harness-orchestrator\` skill
-- Architecture design? Read \`${paths.agents}/architect.md\`
-- Quality review? Read \`${paths.skills}/quality-gate/SKILL.md\`
-- Knowledge management? Read \`${paths.skills}/context-setup/SKILL.md\`
-- Evolution feedback? Read \`${paths.skills}/harness-evolve/SKILL.md\`
-- Hooks config? Read \`${paths.skills}/hooks-framework/SKILL.md\`
-- Web search? Read \`${paths.skills}/web-search/SKILL.md\`
-- MCP integration? Read \`${paths.skills}/mcp-connector/SKILL.md\`
-- Install? Read \`README.md\` or run \`node scripts/install.mjs --help\``
+  const templateContent = readFileSync(templateFile, 'utf-8')
+  const harnessSection = replacePlaceholders(templateContent, tool)
 
   return injectSection(file, 'AGENTS.md', harnessSection, dryRun)
 }
@@ -366,29 +313,15 @@ function installAgentsMd(targetDir, tool, dryRun) {
 // ============================================================================
 function installClaudeMd(targetDir, dryRun) {
   const file = join(targetDir, 'CLAUDE.md')
-  
-  const harnessSection = `## Harness: Harness Engineering
+  const templateFile = join(SCRIPT_DIR, '..', 'templates', 'CLAUDE.md')
 
-**Goal:** One-click AI agent team + harness system setup for any project
+  if (!existsSync(templateFile)) {
+    err(`Template not found: ${templateFile}`)
+    return 0
+  }
 
-**Trigger:** When work involves harness config, agent team setup, or knowledge architecture, use \`harness-orchestrator\` skill. Answer simple questions directly.
-
-### Architecture Map
-
-- [AGENTS.md](AGENTS.md) — main project doc and harness pointer
-- Agent definitions: \`.claude/agents/\` (7)
-- Skill definitions: \`.claude/skills/\` (14)
-- Install script: \`scripts/install.mjs\`
-
-### Core Principles
-
-1. **Humans steer, agents execute**
-2. **Repo = system of record**
-3. **Map, not manual**
-4. **Constraints = multipliers**
-5. **Progressive disclosure**
-6. **Corrections cheap, waiting expensive**
-7. **Agent = Model + Harness** — model provides intelligence, harness makes it useful`
+  const templateContent = readFileSync(templateFile, 'utf-8')
+  const harnessSection = replacePlaceholders(templateContent, 'claude')
 
   return injectSection(file, 'CLAUDE.md', harnessSection, dryRun)
 }
@@ -399,7 +332,8 @@ function installClaudeMd(targetDir, dryRun) {
 const PLACEHOLDER_MAP = {
   claude: { '{{SKILLS_DIR}}': '.claude/skills', '{{AGENTS_DIR}}': '.claude/agents' },
   codex: { '{{SKILLS_DIR}}': '.agents/skills', '{{AGENTS_DIR}}': '.agents/agents' },
-  opencode: { '{{SKILLS_DIR}}': '.opencode/skills', '{{AGENTS_DIR}}': '.opencode/agents' }
+  opencode: { '{{SKILLS_DIR}}': '.opencode/skills', '{{AGENTS_DIR}}': '.opencode/agents' },
+  all: { '{{SKILLS_DIR}}': '.claude/skills', '{{AGENTS_DIR}}': '.claude/agents' }
 }
 
 function replacePlaceholders(content, tool) {
