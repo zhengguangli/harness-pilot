@@ -1,6 +1,6 @@
 ---
 name: context-setup
-description: Generate and maintain project knowledge architecture. Creates AGENTS.md, docs/, domain docs. Triggers on "设置知识库", "生成 AGENTS.md", "创建文档结构", "context setup", "知识库初始化", "知识库搭建".
+description: Generate and maintain project knowledge architecture. Creates AGENTS.md, docs/, domain docs. Triggers on explicit requests: "初始化知识库", "生成 AGENTS.md", "创建文档结构", "context setup", "搭建知识库". Do NOT trigger when discussing general documentation.
 ---
 
 # Context Setup — Knowledge Base Architecture Generation

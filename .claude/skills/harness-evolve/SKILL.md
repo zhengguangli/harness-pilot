@@ -1,6 +1,6 @@
 ---
 name: harness-evolve
-description: Feedback-driven Harness evolution. Collect feedback, improve agents/skills/knowledge. Triggers on "改进 harness", "演进", "harness evolve", "反馈整合", "优化 agent 团队".
+description: Feedback-driven Harness evolution. Collect feedback, improve agents/skills/knowledge. Triggers on explicit requests: "改进 harness", "演进 harness", "harness evolve", "收集反馈", "优化 agent 团队". Do NOT trigger when discussing general improvements.
 ---
 
 # Harness Evolve — Feedback-Driven Evolution

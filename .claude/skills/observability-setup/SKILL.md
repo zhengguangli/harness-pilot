@@ -1,6 +1,6 @@
 ---
 name: observability-setup
-description: Observability stack setup. Logs, metrics, tracing so agents can query app state. Triggers on "配置可观测性", "设置日志", "observability", "监控配置", "追踪系统", "可观测性".
+description: Observability stack setup. Logs, metrics, tracing so agents can query app state. Triggers on explicit requests: "配置可观测性", "设置监控", "添加日志", "配置 metrics", "observability setup". Do NOT trigger when discussing general logging.
 ---
 
 # Observability Setup — Observability Stack Configuration

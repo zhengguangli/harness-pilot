@@ -1,6 +1,6 @@
 ---
 name: architecture-guard
-description: Enforce architecture boundaries & taste invariants. Generate linter rules, structural tests, CI checks. Triggers on "架构检查", "边界验证", "生成 linter", "architecture guard", "强制执行架构", "品味检查".
+description: Enforce architecture boundaries & taste invariants. Generate linter rules, structural tests, CI checks. Triggers on explicit requests: "运行架构检查", "检查边界", "生成 linter 规则", "architecture guard", "强制执行架构". Do NOT trigger when discussing general architecture.
 ---
 
 # Architecture Guard — Architecture Boundary Enforcement

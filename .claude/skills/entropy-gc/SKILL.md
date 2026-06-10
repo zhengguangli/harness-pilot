@@ -1,6 +1,6 @@
 ---
 name: entropy-gc
-description: Entropy management & garbage collection. Detect code drift, quality degradation, tech debt, open cleanup PRs. Triggers on "垃圾收集", "代码清理", "漂移检测", "entropy gc", "技术债务", "技术债", "质量扫描".
+description: Entropy management & garbage collection. Detect code drift, quality degradation, tech debt, open cleanup PRs. Triggers on explicit requests: "运行垃圾收集", "清理代码", "entropy gc", "技术债务扫描", "漂移检测". Do NOT trigger when discussing general cleanup.
 ---
 
 # Entropy GC — Entropy Management & Garbage Collection

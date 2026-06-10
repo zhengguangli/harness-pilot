@@ -1,6 +1,6 @@
 ---
 name: tool-search
-description: Dynamic tool discovery. Discover and load tools on demand instead of pre-configured sets. Triggers on "查找工具", "搜索工具", "tool search", "还有哪些工具", "工具有哪些", "什么工具能用".
+description: Dynamic tool discovery. Discover and load tools on demand instead of pre-configured sets. Triggers on explicit requests: "帮我查找工具", "搜索可用工具", "还有什么工具可以用", "列出所有工具". Do NOT trigger when discussing skill configuration.
 ---
 
 # Tool Search — Dynamic Tool Discovery

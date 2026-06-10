@@ -1,6 +1,6 @@
 ---
 name: quality-gate
-description: Quality review gate. Code review, architecture compliance, taste validation, test verification. Triggers on "质量审查", "代码审查", "quality gate", "审查门禁", "质量检查", "审核".
+description: Quality review gate. Code review, architecture compliance, taste validation, test verification. Triggers on explicit requests: "运行质量审查", "执行 quality gate", "代码审查", "质量检查", "review code". Do NOT trigger when discussing general quality.
 ---
 
 # Quality Gate

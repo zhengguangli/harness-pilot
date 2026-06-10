@@ -1,6 +1,6 @@
 ---
 name: sandbox-exec
-description: Secure code execution environment. Sandbox, command allowlists, network isolation. Triggers on "沙箱", "安全执行", "sandbox", "代码隔离", "安全运行", "安全隔离".
+description: Secure code execution environment. Sandbox, command allowlists, network isolation. Triggers on explicit requests: "配置沙箱", "安全执行环境", "sandbox setup", "代码隔离", "安全运行配置". Do NOT trigger when discussing general security.
 ---
 
 # Sandbox Exec — Secure Code Execution Environment

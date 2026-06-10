@@ -1,6 +1,6 @@
 ---
 name: hooks-framework
-description: Hooks/middleware framework. Deterministic execution hooks: compaction, continuation, lint checks. Triggers on "配置 hooks", "中间件", "hooks framework", "执行钩子", "确定性检查", "hook".
+description: Hooks/middleware framework. Deterministic execution hooks: compaction, continuation, lint checks. Triggers on explicit requests: "配置 hooks", "设置中间件", "hooks framework", "执行钩子", "配置确定性检查". Do NOT trigger when discussing general hooks.
 ---
 
 # Hooks Framework — Deterministic Execution Hooks

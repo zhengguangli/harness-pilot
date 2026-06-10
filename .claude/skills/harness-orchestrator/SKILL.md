@@ -1,6 +1,6 @@
 ---
 name: harness-orchestrator
-description: Harness team orchestrator. Coordinates agent/skill execution, phase transitions, data handoff. Triggers on "运行 harness", "harness run", "执行 harness", "orchestrator", "编排". For init use harness-init instead.
+description: Harness team orchestrator. Coordinates agent/skill execution, phase transitions, data handoff. Triggers on explicit requests: "运行 harness", "harness run", "执行 harness", "启动 orchestrator", "开始编排". For init use harness-init instead.
 ---
 
 # Harness Orchestrator — Team Orchestrator
