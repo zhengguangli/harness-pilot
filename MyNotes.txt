@@ -1,0 +1,4 @@
+# 功能对比
+获取最新harness文档，对比当前harness-polit规则与文档提出的规则是否有偏差
+https://openai.com/zh-Hans-CN/index/harness-engineering
+https://www.langchain.com/blog/the-anatomy-of-an-agent-harness
