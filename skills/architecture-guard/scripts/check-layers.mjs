@@ -5,6 +5,9 @@ import { getWorkspaceDir } from '../../../scripts/lib/workspace.mjs'
 const LAYERS = ['types', 'config', 'repo', 'service', 'runtime', 'ui', 'components', 'pages', 'app']
 
 const SKIP = new Set(['node_modules', '.git', 'target', 'dist', 'build', '.next', '.workspace', basename(getWorkspaceDir())])
+
+function findFiles(dir, exts, maxDepth = 10) {
+  const results = []
   function walk(d, depth) {
     if (depth > maxDepth) return
     let entries
