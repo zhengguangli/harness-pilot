@@ -82,3 +82,30 @@ Saves 50-90% repeated context token cost. Auto-cached:
 - Evolve? `.claude/skills/harness-evolve/SKILL.md`
 
 See [CHANGELOG.md](CHANGELOG.md) for change history.
+
+<!-- HARNESS-PILOT:START -->
+
+## Harness: Harness Engineering
+
+**Goal:** One-click AI agent team + harness system setup for any project
+
+**Trigger:** When work involves harness config, agent team setup, or knowledge architecture, use `harness-orchestrator` skill. Answer simple questions directly.
+
+### Architecture Map
+
+- [AGENTS.md](AGENTS.md) — main project doc and harness pointer
+- Agent definitions: `.claude/agents/` (7)
+- Skill definitions: `.claude/skills/` (14)
+- Install script: `scripts/install.mjs`
+
+### Core Principles
+
+1. **Humans steer, agents execute**
+2. **Repo = system of record**
+3. **Map, not manual**
+4. **Constraints = multipliers**
+5. **Progressive disclosure**
+6. **Corrections cheap, waiting expensive**
+7. **Agent = Model + Harness** — model provides intelligence, harness makes it useful
+
+<!-- HARNESS-PILOT:END -->

@@ -1,71 +1,37 @@
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync, mkdirSync } from 'fs'
-import { join, extname } from 'path'
-import { execSync } from 'child_process'
-import { getWorkspaceDir } from '../../../../scripts/lib/workspace.mjs'
+#!/usr/bin/env node
+/**
+ * quality-metric.mjs — Quality Metrics Recording
+ * Records quality metrics for the session
+ */
 
-function findSourceFiles(projectDir, exts) {
-  const results = []
-  const skip = new Set(['node_modules', '.git', 'target', 'dist', 'build', '.next'])
-  function walk(dir, depth) {
-    if (depth > 5) return
-    let entries
-    try { entries = readdirSync(dir, { withFileTypes: true }) } catch { return }
-    for (const e of entries) {
-      if (skip.has(e.name)) continue
-      const full = join(dir, e.name)
-      if (e.isDirectory()) walk(full, depth + 1)
-      else if (exts.has(extname(e.name))) results.push(full)
-    }
-  }
-  walk(projectDir, 0)
-  return results
-}
+import { writeFileSync, readFileSync, mkdirSync, existsSync, appendFileSync } from 'fs'
+import { join } from 'path'
 
-export function qualityMetric(projectDir) {
-  const ws = getWorkspaceDir(projectDir)
-  const metricsDir = join(ws, 'metrics')
-  try { mkdirSync(metricsDir, { recursive: true }) } catch {}
-
-  const dateStr = new Date().toISOString().slice(0, 10)
-  const exts = new Set(['.ts', '.js', '.py', '.go', '.rs', '.tsx', '.jsx'])
-  const files = findSourceFiles(projectDir, exts)
-
-  let todoCount = 0
-  let largeFiles = 0
-  let totalLines = 0
-
-  for (const f of files) {
-    try {
-      const content = readFileSync(f, 'utf-8')
-      const lines = content.split('\n')
-      totalLines += lines.length
-      if (lines.length > 500) largeFiles++
-      for (const line of lines) {
-        if (/TODO|FIXME/.test(line)) todoCount++
-      }
-    } catch {}
+export function qualityMetric(projectDir, metrics = {}) {
+  const harnessDir = join(projectDir, '.harness-polit', 'metrics')
+  if (!existsSync(harnessDir)) {
+    mkdirSync(harnessDir, { recursive: true })
   }
 
-  let commitCount = 0
-  try {
-    const gitOutput = execSync('git log --oneline -30', { cwd: projectDir, encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] })
-    commitCount = gitOutput.trim().split('\n').filter(line => line.length > 0).length
-  } catch {}
-
-  const avgLines = files.length > 0 ? Math.round(totalLines / files.length) : 0
-
-  const metrics = {
+  const entry = {
     timestamp: new Date().toISOString(),
-    metrics: { todo_count: todoCount, file_count: files.length, avg_lines_per_file: avgLines, large_files: largeFiles, recent_commits: commitCount }
+    ...metrics
   }
 
-  writeFileSync(join(metricsDir, `quality_${dateStr}.json`), JSON.stringify(metrics, null, 2))
-  return { exitCode: 0, message: '' }
+  const logPath = join(harnessDir, 'quality.jsonl')
+  appendFileSync(logPath, JSON.stringify(entry) + '\n', 'utf-8')
+
+  return { 
+    success: true, 
+    message: 'Quality metric recorded',
+    path: logPath
+  }
 }
 
+// CLI mode
 if (process.argv[1]?.endsWith('quality-metric.mjs')) {
-  const dir = process.env.CLAUDE_PROJECT_DIR || process.env.PROJECT_DIR || process.cwd()
-  const r = qualityMetric(dir)
-  if (r.message) console.log(r.message)
+  const input = JSON.parse(readFileSync(0, 'utf-8'))
+  const result = qualityMetric(input.projectDir || process.cwd(), input.metrics)
+  console.log(JSON.stringify(result))
   process.exit(0)
 }

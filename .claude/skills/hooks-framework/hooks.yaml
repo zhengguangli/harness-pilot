@@ -1,49 +1,76 @@
-# hooks.yaml — Harness Unified Hook Configuration
-#
-# Abstract event → Native event mapping:
-#   on_session_start  → Claude: SessionStart       Codex: SessionStart         OpenCode: session.created
-#   on_file_edit      → Claude: PostToolUse(Edit)   Codex: PostToolUse(Edit)    OpenCode: file.edited
-#   on_tool_output    → Claude: PostToolUse(*)       Codex: PostToolUse(*)       OpenCode: tool.executed
-#   on_compact        → Claude: PreCompact          Codex: PreCompact           OpenCode: experimental.session.compacting
-#   on_turn_end       → Claude: Stop                Codex: Stop                 OpenCode: session.idle
-#
-# All scripts: .mjs (Node.js ESM), dual-mode (CLI + import)
-# All scripts always exit 0 (warnings → stderr, never block)
+# Hooks Framework — Unified Configuration
+# This file is the declarative configuration layer. install.mjs translates
+# these abstract hooks to each tool's native format:
+#   Claude Code → .claude/settings.json
+#   Codex       → .codex/hooks.json
+#   OpenCode    → .opencode/plugins/
 
 hooks:
-  on_session_start:
-    - script: context-check.mjs
-      description: Check AGENTS.md freshness and integrity
-    - script: env-verify.mjs
-      description: Verify environment ready
+  # ── Session Lifecycle ──
+  - event: on_session_start
+    description: Run when agent session starts
+    actions:
+      - script: scripts/context-check.mjs
+        description: Check AGENTS.md freshness
+      - script: scripts/env-verify.mjs
+        description: Verify environment readiness
 
-  on_file_edit:
-    - script: lint-check.mjs
-      description: Architecture boundaries + docs/ size constraint check
-    - script: apply-patch.mjs
-      description: Apply Patch validation — unified diff format, line offset tolerance, conflict detection
+  # ── File Editing ──
+  - event: on_file_edit
+    description: Run after file edit operations
+    actions:
+      - script: scripts/lint-check.mjs
+        description: Architecture boundary check
 
-  on_tool_output:
-    - script: tool-offload.mjs
-      description: Tool output offload — large outputs truncated to head/tail, full content → filesystem
-      condition: output_size > 2000
-    - script: retry-timeout.mjs
-      description: Fault tolerance — detect error codes, manage retry count, timeout, and circuit breaker
-    - script: context-cleanup.mjs
-      description: File ref tracking — record read files for auto-unload
+  # ── Apply Patch ──
+  - event: on_apply_patch
+    description: Run after apply_patch tool execution
+    actions:
+      - script: scripts/apply-patch.mjs
+        description: Validate and apply patch
 
-  on_compact:
-    - script: compaction.mjs
-      description: Context compaction — enhanced summary (trace + metrics + continuation hint)
+  # ── Tool Output ──
+  - event: on_tool_output
+    description: Run after any tool execution
+    actions:
+      - script: scripts/tool-offload.mjs
+        condition: "output_length > 2000"
+        description: Offload large outputs to filesystem
+      - script: scripts/context-cleanup.mjs
+        description: Track file references
 
-  on_turn_end:
-    - script: continuation.mjs
-      description: Ralph Loop — detect interruption, generate continuation prompt
-    - script: trace-log.mjs
-      description: Record execution log
-    - script: quality-metric.mjs
-      description: Track quality metrics
-    - script: test-run.mjs
-      description: Run project tests — auto-detect test framework and execute
-    - script: context-cleanup.mjs
-      description: File ref cleanup — check unloadable files and generate cleanup suggestions
+  # ── Compaction ──
+  - event: on_compact
+    description: Run before context compaction
+    actions:
+      - script: scripts/compaction.mjs
+        description: Generate compaction summary
+
+  # ── Turn End ──
+  - event: on_turn_end
+    description: Run when agent turn ends
+    actions:
+      - script: scripts/todo-sync.mjs
+        description: Sync todo state to filesystem
+      - script: scripts/continuation.mjs
+        description: Check if task needs continuation
+      - script: scripts/quality-metric.mjs
+        description: Record quality metrics
+      - script: scripts/trace-log.mjs
+        description: Log execution trace
+
+  # ── Error Handling ──
+  - event: on_error
+    description: Run when tool execution fails
+    actions:
+      - script: scripts/retry-timeout.mjs
+        description: Handle retry logic and circuit breaker
+
+# Configuration parameters
+config:
+  tool_offload_threshold: 2000
+  ref_ttl_ms: 300000
+  harness_workspace: .harness-polit
+  max_retries: 3
+  circuit_breaker_threshold: 5
+  circuit_breaker_timeout: 600000

@@ -1,93 +1,54 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs'
-import { join, basename } from 'path'
-import { getWorkspaceDir } from '../../../../scripts/lib/workspace.mjs'
+#!/usr/bin/env node
+/**
+ * tool-offload.mjs — Tool Output Offloading
+ * When tool output exceeds threshold, save to filesystem
+ */
 
-const OFFLOAD_THRESHOLD = 2000
-const HEAD_LINES = 20
-const TAIL_LINES = 10
+import { writeFileSync, readFileSync, mkdirSync, existsSync } from 'fs'
+import { join } from 'path'
 
-export function toolOffload(projectDir, toolOutput, toolName = 'unknown') {
-  const ws = getWorkspaceDir(projectDir)
-  const offloadDir = join(ws, 'offloaded')
-  try { mkdirSync(offloadDir, { recursive: true }) } catch {}
+const DEFAULT_THRESHOLD = 2000
 
-  // 如果输出为空或未超过阈值，直接返回原内容
-  if (!toolOutput || toolOutput.length <= OFFLOAD_THRESHOLD) {
-    return { offloaded: false, content: toolOutput }
+export function toolOffload(toolOutput, toolName, projectDir, threshold = DEFAULT_THRESHOLD) {
+  if (!toolOutput || toolOutput.length <= threshold) {
+    return { offloaded: false, message: 'Output within threshold' }
   }
 
-  // 生成唯一文件名
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-  const safeName = toolName.replace(/[^a-zA-Z0-9]/g, '_')
-  const filename = `${safeName}_${timestamp}.txt`
-  const filePath = join(offloadDir, filename)
+  const offloadDir = join(projectDir, '.harness-polit', 'offloaded')
+  if (!existsSync(offloadDir)) {
+    mkdirSync(offloadDir, { recursive: true })
+  }
 
-  // 写入完整内容到文件系统
-  writeFileSync(filePath, toolOutput, 'utf-8')
+  const timestamp = Date.now()
+  const filename = `${toolName || 'output'}_${timestamp}.txt`
+  const filepath = join(offloadDir, filename)
 
-  // 生成摘要：保留首尾部分
+  writeFileSync(filepath, toolOutput, 'utf-8')
+
   const lines = toolOutput.split('\n')
-  const head = lines.slice(0, HEAD_LINES).join('\n')
-  const tail = lines.slice(-TAIL_LINES).join('\n')
-  const omitted = Math.max(0, lines.length - HEAD_LINES - TAIL_LINES)
-
-  const summary = omitted > 0 
-    ? `${head}\n\n... [省略 ${omitted} 行，完整内容已卸载到文件系统] ...\n\n${tail}`
-    : `${head}\n\n${tail}`
-
-  // 生成引用信息
-  const reference = `## 工具输出卸载
-
-**工具:** ${toolName}
-**原始大小:** ${(toolOutput.length / 1024).toFixed(1)}KB (${lines.length} 行)
-**卸载文件:** \`${filePath}\`
-**阈值:** ${OFFLOAD_THRESHOLD} 字符
-
-### 摘要（首尾 ${HEAD_LINES + TAIL_LINES} 行）
-
-${summary}
-
-> 完整内容可通过 \`cat ${filePath}\` 查看`
-
-  // 保存引用文件
-  const refFilename = `${safeName}_${timestamp}_ref.md`
-  const refPath = join(offloadDir, refFilename)
-  writeFileSync(refPath, reference, 'utf-8')
-
-  console.log(`[tool-offload] 已卸载 ${toolName} 输出 (${(toolOutput.length / 1024).toFixed(1)}KB) → ${filePath}`)
+  const head = lines.slice(0, 20).join('\n')
+  const tail = lines.slice(-10).join('\n')
 
   return {
     offloaded: true,
-    content: summary,
-    filePath,
-    refPath,
-    originalSize: toolOutput.length,
-    lineCount: lines.length
+    message: `Output offloaded to ${filename}`,
+    reference: {
+      file: `.harness-polit/offloaded/${filename}`,
+      head,
+      tail,
+      totalLines: lines.length,
+    },
   }
 }
 
-// CLI 模式：从 stdin 读取 JSON 输入
+// CLI mode
 if (process.argv[1]?.endsWith('tool-offload.mjs')) {
-  const dir = process.env.CLAUDE_PROJECT_DIR || process.env.PROJECT_DIR || process.cwd()
-
-  let input = ''
-  try {
-    input = readFileSync('/dev/stdin', 'utf-8')
-  } catch {
-    try { input = readFileSync(0, 'utf-8') } catch {}
-  }
-
-  try {
-    const data = JSON.parse(input)
-    const { tool_output, tool_name } = data
-    const result = toolOffload(dir, tool_output, tool_name)
-    console.log(JSON.stringify(result))
-  } catch (err) {
-    // 如果没有 JSON 输入，使用演示模式
-    const demoOutput = 'A'.repeat(5000) // 模拟大型输出
-    const result = toolOffload(dir, demoOutput, 'demo')
-    console.log(JSON.stringify(result, null, 2))
-  }
-
+  const input = JSON.parse(readFileSync(0, 'utf-8'))
+  const result = toolOffload(
+    input.tool_output,
+    input.tool_name,
+    input.projectDir || process.cwd()
+  )
+  console.log(JSON.stringify(result))
   process.exit(0)
 }
