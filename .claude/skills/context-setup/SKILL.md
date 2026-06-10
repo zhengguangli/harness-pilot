@@ -79,6 +79,38 @@ docs/
 └── SECURITY.md
 ```
 
+**FRONTEND.md 内容模板：**
+
+FRONTEND.md 是前端开发的核心约束文档，防止 agent 生成千篇一律的"AI Slop"界面。
+
+```markdown
+## 字体系统
+- 主字体：{自定义字体名}（加载自 Google Fonts / 本地）
+- 等宽字体：{如 JetBrains Mono, Fira Code}
+- 禁止默认栈：不使用 Inter, Roboto, Arial, system-ui 作为主字体
+
+## 色彩系统（CSS 变量）
+- 主色：--primary: #XXXXXX
+- 辅色：--accent: #XXXXXX
+- 背景：--bg: 渐变/纹理定义
+- 文字：--text-primary / --text-secondary
+- 禁止紫色渐变 + 白色背景的默认配色
+
+## 动效规范
+- 页面加载：有意义的出现/揭示动画（staggered reveal）
+- 交互：明确过渡时间和缓动函数
+- 禁止泛用 micro-motion 堆砌
+
+## 布局约束
+- 响应式断点：mobile / tablet / desktop
+- 组件间距系统
+- 禁止样板化布局（Hero + 三列卡片 + CTA 模式）
+
+## 组件规范
+- 已有设计系统的项目：严格遵守既有模式
+- 新项目：定义明确的视觉方向，避免可互换的 UI 模式
+```
+
 ### Step 4: 生成骨架文档
 
 每个文档生成骨架内容，包含：
@@ -131,6 +163,38 @@ Context Rot 描述模型在上下文窗口填满时推理能力下降的现象�
 | GitHub API | 查询 issue、PR、代码搜索 | MCP server |
 
 在 AGENTS.md 中记录可用的搜索工具及使用时机。
+
+### Step 8: 语义文件检索
+
+**与 grep 的区别：**
+- `grep` / `rg`：正则匹配，适合精确符号/字符串搜索
+- 语义检索：理解意图，适合"找那段处理超时重试的代码"这类模糊查询
+
+**配置工具（推荐 Context7 或等效方案）：**
+
+```json
+{
+  "name": "file_search",
+  "description": "语义搜索代码库。理解自然语言查询意图，返回最相关的文件和代码段。",
+  "parameters": {
+    "query": "自然语言描述（如 '错误重试逻辑在哪里实现'）",
+    "max_results": "最大返回数（默认 5）",
+    "include": "文件 patterns 过滤（如 '*.ts'）",
+    "path": "搜索范围（默认项目根目录）"
+  }
+}
+```
+
+**使用时机：**
+- 新 agent 加入项目时，快速理解代码结构
+- 搜索"类似功能的实现"（grep 无法匹配意图）
+- 代码审查时查找相关上下文
+- 重构前评估影响范围
+
+**配置方式：**
+- 基于 MCP 的语义搜索服务器（推荐）
+- 本地 embeddings + 向量数据库（离线方案）
+- 集成到 `context-setup` 的知识审计流程中，自动索引项目代码
 
 ## 质量标准
 

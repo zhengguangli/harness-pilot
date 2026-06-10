@@ -143,9 +143,9 @@ node harness-verify.mjs /path/to/your/project
 
 详见 `VERIFICATION_CHECKLIST.md`，包含：
 - 核心组件验证（ReAct、Tool Offload、浏览器、文件系统）
-- Hooks 框架验证（6 个脚本）
+- Hooks 框架验证（9 个脚本）
 - Agent 团队验证（7 个 agent）
-- Skill 团队验证（11 个 skill）
+- Skill 团队验证（14 个 skill）
 - 配置文件验证（CLAUDE.md、AGENTS.md、settings.json）
 - 项目测试验证（单元测试）
 

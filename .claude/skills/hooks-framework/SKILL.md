@@ -42,15 +42,118 @@ scripts/（执行层：.mjs 脚本，三工具通用）
 - 保留完整信息的可访问性
 - 支持渐进式披露：按需查看完整内容
 
+### Apply Patch（代码编辑工具）
+
+**问题：** 模型需要用精确、可控的方式编辑文件，而非重写整个文件或使用不稳定的搜索替换。
+
+**原理：** 基于 OpenAI Codex 的 `apply_patch` 工具标准实现，模型针对 unified diff 格式进行了后训练。
+
+**工具 Schema：**
+
+```json
+{
+  "type": "apply_patch",
+  "path": "文件路径",
+  "diff": "unified diff 格式的补丁内容"
+}
+```
+
+**与 hooks 集成：**
+- `on_file_edit` 钩子自动触发 `apply-patch.mjs` 验证补丁格式
+- 补丁应用前检查：文件存在性、行号偏移容差、冲突检测
+- 应用失败时返回具体错误行号和建议修复方案
+- 支持生成 `.workspace/patches/` 记录所有补丁历史，用于回滚
+
+**最佳实践（来自 OpenAI Codex Prompting Guide）：**
+- 单文件编辑优先使用 apply_patch
+- 自动生成的变更（如 `package.json`、`gofmt` 输出）不使用 apply_patch
+- 跨文件批量搜索替换时使用脚本方式更高效
+- 补丁格式必须为 unified diff（`@@ -line,count +line,count @@`）
+
+### Fault Tolerance（容错模式）
+
+**问题：** 长时间运行的 agent 任务会遇到各种瞬时故障——网络抖动、API 限流、沙箱超时——缺乏容错机制会导致整个任务失败。
+
+**解决方案：** 三层容错架构。
+
+**第一层：操作级重试（Retry）**
+
+指数退避策略，适用于工具调用、API 请求、文件操作：
+
+```
+失败次数  等待时间  操作
+第 1 次   1s      重试
+第 2 次   2s      重试
+第 3 次   4s      重试
+第 4 次   -       放弃，记录错误
+```
+
+**第二层：超时控制（Timeout）**
+
+| 操作类型 | 默认超时 | 超时行为 |
+|----------|----------|----------|
+| Shell 命令 | 120s | 终止进程，返回部分输出 |
+| API 调用 | 60s | 重试一次 |
+| 文件操作 | 30s | 报错退出 |
+| 沙箱创建 | 120s | 重建一次 |
+
+**第三层：熔断器（Circuit Breaker）**
+
+同一操作类型在 5 分钟内失败 >= 5 次时触发：
+1. 暂停该操作类型 10 分钟
+2. 通知 orchestrator 切换到替代工具
+3. 记录熔断事件到 `.workspace/metrics/circuit-breaker.log`
+4. 10 分钟后自动半开探测，成功则恢复
+
+**Hooks 集成：**
+- `on_tool_output` 钩子检测工具返回的错误码
+- `retry-timeout.mjs` 管理重试计数器和超时逻辑
+- 熔断状态持久化到 `.workspace/metrics/`，跨 session 保持
+
+### API-Native Compaction vs 脚本 Compaction
+
+**两种策略对比：**
+
+| 维度 | API-Native Compaction | 脚本 Compaction |
+|------|----------------------|-----------------|
+| 实现方式 | 调用 API 内置 `/compact` 端点 | `compaction.mjs` 脚本触发 `PreCompact` 钩子 |
+| 效率 | API 与模型协同压缩，高保真 | 独立摘要，可能丢失关键上下文 |
+| 兼容性 | 仅特定 API 支持（OpenAI Responses API / Claude） | 所有模型通用 |
+| 标记 | `encrypted_content`（ZDR 兼容） | 文件系统摘要文件 |
+| 推荐场景 | 优先使用（如果 API 支持） | 回退方案（API 不支持时） |
+
+**自动选择逻辑：**
+```
+检测 API 是否支持原生 compaction
+  ├─ 支持 → 配置 on_compact 钩子为空（让 API 处理）
+  └─ 不支持 → 使用 compaction.mjs 脚本方案
+```
+
+当前默认使用脚本方案以保证跨平台兼容性。在支持原生 compaction 的 API（如 OpenAI Responses API 的 `/compact` 端点或 Claude 的内置摘要）上运行时，建议禁用脚本 compaction 以避免双重压缩。
+
+### Prompt Caching 指导
+
+**核心认知：** Prompt caching 是降低 token 消耗和延迟的最大单一优化杠杆，可节省 50-90% 的重复上下文成本。
+
+**适用场景：**
+- 所有 agent 的 system prompt（变化频率最低）
+- AGENTS.md 注入内容（跨 session 不变）
+- 重复使用的工具定义 Schema
+- 长对话中不可变的历史消息段
+
+**Hooks 集成：** `on_session_start` 钩子自动将 AGENTS.md 等静态内容标记为可缓存前缀，由 API 自动管理缓存命中。
+
 ## 抽象事件映射
 
 | 抽象事件 | Claude Code | Codex | OpenCode |
 |----------|-------------|-------|----------|
 | `on_session_start` | `SessionStart` | `SessionStart` | `session.created` |
 | `on_file_edit` | `PostToolUse(Edit\|Write)` | `PostToolUse(Edit\|Write)` | `file.edited` |
+| `on_apply_patch` | `PostToolUse(apply_patch)` | `PostToolUse(apply_patch)` | `tool.executed(apply_patch)` |
 | `on_tool_output` | `PostToolUse(*)` | `PostToolUse(*)` | `tool.executed` |
 | `on_compact` | `PreCompact` | `PreCompact` | `experimental.session.compacting` |
 | `on_turn_end` | `Stop` | `Stop` | `session.idle` |
+| `on_error` | `PostToolUse(*, error)` | `PostToolUse(*, error)` | `tool.executed(error)` |
 
 ## 可运行脚本
 
@@ -67,6 +170,8 @@ scripts/（执行层：.mjs 脚本，三工具通用）
     ├── continuation.mjs      ← Ralph Loop 续行检测
     ├── compaction.mjs        ← 上下文压缩
     ├── tool-offload.mjs      ← 工具输出卸载
+    ├── apply-patch.mjs       ← Apply Patch 补丁验证与应用
+    ├── retry-timeout.mjs     ← 容错：重试计数 + 超时 + 熔断
     ├── trace-log.mjs         ← 执行日志
     └── quality-metric.mjs    ← 质量指标
 ```

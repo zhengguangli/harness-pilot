@@ -212,3 +212,11 @@ services:
 - vector.toml（信号采集配置）
 - MCP 工具定义（可选）
 - docs/RELIABILITY.md 更新
+
+## 质量标准
+
+- 日志/指标/追踪三个信号全部可查询
+- 查询接口对所有 agent 可访问
+- docker-compose 一键启动，无需额外配置
+- 轻量级方案可用 `jq` 替代 Grafana 进行日志查询
+- 截屏证据保存路径标准化（`.workspace/evidence/`）

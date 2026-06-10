@@ -5,6 +5,10 @@ description: 为项目初始化完整的 Harness Engineering 体系。一键生�
 
 # Harness Init — 一键初始化 Harness 工程体系
 
+## 核心理念
+
+**一键部署，零摩擦启动。** Harness Engineering 体系应像 `npm install` 一样简单——一条命令完成 agents、skills、知识库的完整部署。增量注入不覆盖已有内容，确保与现有项目无缝集成。
+
 ## 触发条件
 
 用户要求为项目配置完整的 agent 团队和 harness 体系时触发。
@@ -59,8 +63,8 @@ description: 为项目初始化完整的 Harness Engineering 体系。一键生�
 基于 `.claude/skills/hooks-framework/hooks.yaml` 模板，生成项目定制的 hooks 配置：
 
 1. 复制 `hooks.yaml` 到项目根目录
-2. 根据项目技术栈调整 `lint-check.sh` 中的检查规则
-3. 根据项目测试框架调整 `test-run.sh` 中的测试命令
+2. 根据项目技术栈调整 `lint-check.mjs` 中的检查规则
+3. 根据项目测试框架调整 `test-run.mjs` 中的测试命令
 4. 配置 CI 集成（`.github/workflows/harness-hooks.yml`）
 
 **hooks.yaml 核心配置：**

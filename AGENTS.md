@@ -6,7 +6,7 @@ harness-pilot 是一套 Harness Engineering 技能包，为 Claude Code、Codex�
 ## 架构地图
 - [CLAUDE.md](CLAUDE.md) — 项目主文档和 harness 指针
 - [README.md](README.md) — 安装和使用指南
-- Agent 定义：`.claude/agents/`（7 个）| Skill 定义：`.claude/skills/`（11 个）
+- Agent 定义：`.claude/agents/`（7 个）| Skill 定义：`.claude/skills/`（14 个）
 - 安装脚本：`scripts/install.mjs`
 
 ## 关键约束
@@ -31,7 +31,8 @@ harness-pilot 是一套 Harness Engineering 技能包，为 Claude Code、Codex�
 | entropy-gc | 熵管理 | quality-gate | 质量门禁 |
 | hooks-framework | 执行钩子 | harness-evolve | 反馈演进 |
 | agent-readability | 可读性 | sandbox-exec | 安全执行 |
-| observability-setup | 可观测性 | | |
+| observability-setup | 可观测性 | web-search | Web 搜索 |
+| mcp-connector | MCP 集成 | tool-search | 工具发现 |
 
 ## 导航指引
 - 初始化？`harness-init` / `harness-orchestrator`

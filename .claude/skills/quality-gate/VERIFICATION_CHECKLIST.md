@@ -54,6 +54,9 @@
 | agent-readability | `.claude/skills/agent-readability/SKILL.md` | ✅ |
 | harness-evolve | `.claude/skills/harness-evolve/SKILL.md` | ✅ |
 | hooks-framework | `.claude/skills/hooks-framework/SKILL.md` | ✅ |
+| web-search | `.claude/skills/web-search/SKILL.md` | ✅ |
+| mcp-connector | `.claude/skills/mcp-connector/SKILL.md` | ✅ |
+| tool-search | `.claude/skills/tool-search/SKILL.md` | ✅ |
 
 ### 5. 配置文件验证
 
@@ -75,7 +78,7 @@
 
 ```bash
 #!/bin/bash
-# harness-verify.sh — 自动化质量检查脚本
+# harness-verify.mjs — 自动化质量检查脚本
 
 set -e
 
@@ -97,7 +100,7 @@ echo "  - 文件系统原语: $FILESYSTEM (预期 ≥ 1)"
 # 2. Hooks 框架验证
 echo ""
 echo "2. Hooks 框架验证"
-for script in context-check env-verify lint-check tool-offload compaction continuation; do
+for script in context-check env-verify lint-check tool-offload compaction continuation apply-patch retry-timeout test-run trace-log quality-metric; do
   if [ -f ".claude/skills/hooks-framework/scripts/${script}.mjs" ]; then
     echo "  - ${script}.mjs: ✅ 存在"
   else
@@ -119,7 +122,7 @@ done
 # 4. Skill 团队验证
 echo ""
 echo "4. Skill 团队验证"
-for skill in harness-orchestrator harness-init context-setup architecture-guard entropy-gc observability-setup sandbox-exec quality-gate agent-readability harness-evolve hooks-framework; do
+for skill in harness-orchestrator harness-init context-setup architecture-guard entropy-gc observability-setup sandbox-exec quality-gate agent-readability harness-evolve hooks-framework web-search mcp-connector tool-search; do
   if [ -f ".claude/skills/${skill}/SKILL.md" ]; then
     echo "  - ${skill}: ✅ 存在"
   else
@@ -161,11 +164,11 @@ bash /path/to/harness-polit/.claude/skills/quality-gate/VERIFICATION_CHECKLIST.m
 
 ```bash
 # 复制验证脚本到目标项目
-cp harness-polit/.claude/skills/quality-gate/harness-verify.sh /path/to/your/project/
+cp harness-polit/.claude/skills/quality-gate/harness-verify.mjs /path/to/your/project/
 
 # 运行验证
 cd /path/to/your/project
-bash harness-verify.sh
+node harness-verify.mjs
 ```
 
 ## 质量标准

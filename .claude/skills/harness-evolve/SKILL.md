@@ -69,7 +69,7 @@ description: 反馈驱动的 Harness 演进。收集执行反馈，持续改进 
 
 ### Step 6: 评估基准
 
-**Terminal Bench 2.0 参考：**
+**Terminal Bench 2.0 自动化：**
 
 使用 Terminal Bench 2.0 评估 harness 配置效果：
 
@@ -80,12 +80,12 @@ description: 反馈驱动的 Harness 演进。收集执行反馈，持续改进 
 | 执行效率 | 完成任务所需时间和 token | 20% |
 | 错误恢复 | 遇到错误时的恢复能力 | 10% |
 
-**评估流程：**
-1. 选择标准测试任务集
-2. 在当前 harness 配置下运行
-3. 记录评分和瓶颈
-4. 调整 harness 配置
-5. 重新评估，对比改进效果
+**自动化评估流程：**
+1. 从 Terminal Bench 2.0 选择标准测试任务集
+2. 在当前 harness 配置下运行 `node .claude/skills/harness-evolve/scripts/run-benchmark.mjs`
+3. 自动收集评分和瓶颈分析
+4. 生成对比报告（当前 vs 历史跑分）
+5. 评分下降时自动触发演进建议
 
 **关键认知：** 同一模型在不同 harness 中表现差异显著。Opus 4.6 在 Claude Code 中的评分远低于在其他 harness 中的评分。持续优化 harness 是提升 agent 性能的关键。
 
@@ -97,6 +97,56 @@ description: 反馈驱动的 Harness 演进。收集执行反馈，持续改进 
 2. **增量修改**：按用户请求增删改，每次修改后立即同步
 3. **更新历史**：记录变更到 CLAUDE.md
 4. **变更验证**：结构检查 + 触发验证（如影响触发）
+
+### Step 8: Trace 自分析
+
+**用途：** 分析 agent 执行 trace 以识别和修复 harness 级别的故障模式。
+
+**分析流程：**
+1. 加载 `.workspace/trace/` 中的最近 N 次执行日志
+2. 扫描失败模式：
+   - 重复出现的相同错误类型
+   - 某 tool 调用持续超时 → 可能需调整超时或替代工具
+   - 某 phase 频繁中断 → 可能需增加 context 或调整步骤分解
+   - 同一文件被反复编辑 → 可能存在上下文腐烂
+3. 生成故障模式报告，自动路由到对应 target：
+   - Tool 问题 → 调整 `hooks-framework` 脚本
+   - Phase 问题 → 调整 `harness-orchestrator` 编排
+   - Context 问题 → 调整 `context-setup` 或压缩策略
+4. 提出修复建议（含具体文件:行号）
+
+**自动化触发：**
+- 每次 harness 执行后自动运行
+- 累计 3 次相同错误模式 → 主动通知用户
+- Terminal Bench 评分下降 >10% → 强制全链路分析
+
+### Step 9: Harness A/B 测试
+
+**用途：** 对比不同 harness 配置的效果，选择最优方案。
+
+**A/B 测试流程：**
+1. 定义 Harness 变体：
+   ```
+   Variant A: 当前配置（基线）
+   Variant B: 修改某一维度（如增加 apply_patch 工具）
+   ```
+2. 在相同任务集上并行运行两个变体
+3. 对比指标：
+   | 指标 | 测量方式 |
+   |------|----------|
+   | 任务完成率 | Terminal Bench 评分 |
+   | Token 消耗 | 总计 + 每次操作均值 |
+   | 执行时间 | 墙钟时间 |
+   | 错误恢复次数 | 从 trace 提取 |
+   | 用户修正次数 | 从 feedback 提取 |
+4. 生成对比报告（`.workspace/benchmark/comparison.html`）
+5. 变体 B 优于 A → 建议合并；劣于 A → 分析原因
+
+**配置变体维度（可独立 A/B 测试）：**
+- Tool 集合（增加/移除某 tool）
+- 压缩策略（阈值、摘要方式）
+- 并行度（子代理数量）
+- reasoning_effort 级别
 
 ## 输入/输出协议
 

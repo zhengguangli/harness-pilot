@@ -20,11 +20,15 @@ hooks:
   on_file_edit:
     - script: lint-check.mjs
       description: 架构边界 + docs/ 大小约束检查
+    - script: apply-patch.mjs
+      description: Apply Patch 补丁格式验证 — 检查 unified diff 格式、行号偏移容差、冲突检测
 
   on_tool_output:
     - script: tool-offload.mjs
       description: 工具输出卸载 — 大型输出只保留首尾引用，完整内容写入文件系统
       condition: output_size > 2000
+    - script: retry-timeout.mjs
+      description: 容错监控 — 检测工具错误码，管理重试计数、超时和熔断状态
 
   on_compact:
     - script: compaction.mjs
