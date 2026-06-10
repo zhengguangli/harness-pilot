@@ -3,6 +3,7 @@
 .harness-polit/
 
 # 本地配置（包含敏感信息）
+.agents/
 .claude/
 .codex/
 .opencode/
