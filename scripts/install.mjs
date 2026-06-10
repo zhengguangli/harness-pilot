@@ -597,7 +597,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: harness-trace
-          path: .workspace/
+          path: .harness-polit/
           retention-days: 7
 `)
     ok('已创建: .github/workflows/harness-hooks.yml')
@@ -667,10 +667,10 @@ jobs:
           if [ -f .claude/skills/hooks-framework/scripts/quality-metric.mjs ]; then
             node .claude/skills/hooks-framework/scripts/quality-metric.mjs || true
           fi
-          if [ -f .workspace/metrics/quality_$(date +%Y%m%d).json ]; then
+          if [ -f .harness-polit/metrics/quality_$(date +%Y%m%d).json ]; then
             echo "### 质量指标" >> /tmp/doc-report.md
             echo '~~~json' >> /tmp/doc-report.md
-            cat .workspace/metrics/quality_$(date +%Y%m%d).json >> /tmp/doc-report.md
+            cat .harness-polit/metrics/quality_$(date +%Y%m%d).json >> /tmp/doc-report.md
             echo '~~~' >> /tmp/doc-report.md
           fi
 `)

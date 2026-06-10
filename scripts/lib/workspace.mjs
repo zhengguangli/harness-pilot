@@ -3,8 +3,8 @@
  *
  * Priority:
  *   1. HARNESS_WORKSPACE env var (user override, absolute path)
- *   2. CLAUDE_PROJECT_DIR + '.workspace'
- *   3. process.cwd() + '.workspace'
+ *   2. CLAUDE_PROJECT_DIR + '.harness-polit'
+ *   3. process.cwd() + '.harness-polit'
  *
  * Usage:
  *   import { getWorkspaceDir, ensureWorkspace } from './scripts/lib/workspace.mjs'
@@ -22,7 +22,7 @@ export function getWorkspaceDir(projectDir) {
   // 2. Project dir from env or arg
   const root = projectDir || process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
-  return join(root, '.workspace');
+  return join(root, '.harness-polit');
 }
 
 export function ensureWorkspace(projectDir) {
