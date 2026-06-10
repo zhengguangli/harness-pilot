@@ -500,6 +500,28 @@ function installSkills(targetDir, tool, force, dryRun) {
   return { installed, updated }
 }
 
+// ============================================================================
+// 安装共享 lib（scripts/lib/workspace.mjs）
+// ============================================================================
+function installSharedLib(targetDir, dryRun) {
+  const srcFile = join(SCRIPT_DIR, 'lib', 'workspace.mjs')
+  const destDir = join(targetDir, 'scripts', 'lib')
+  const destFile = join(destDir, 'workspace.mjs')
+
+  if (!existsSync(srcFile)) return
+
+  if (existsSync(destFile)) {
+    const srcContent = readFileSync(srcFile, 'utf-8')
+    const destContent = readFileSync(destFile, 'utf-8')
+    if (sha256(srcContent) === sha256(destContent)) return
+  }
+
+  if (dryRun) { log(`[dry-run] 将更新: scripts/lib/workspace.mjs`); return }
+  mkdirSync(destDir, { recursive: true })
+  copyFileSync(srcFile, destFile)
+  ok(`已更新: scripts/lib/workspace.mjs`)
+}
+
 function copyDirSync(src, dest) {
   mkdirSync(dest, { recursive: true })
   const entries = readdirSync(src, { withFileTypes: true })
@@ -962,6 +984,7 @@ async function main() {
 
   const agentResult = installAgents(targetDir, config.force, config.dryRun)
   const skillResult = installSkills(targetDir, config.tool, config.force, config.dryRun)
+  installSharedLib(targetDir, config.dryRun)
   installClaudeMd(targetDir, config.dryRun)
   installAgentsMd(targetDir, config.dryRun)
   installDocsStructure(targetDir, config.dryRun)
