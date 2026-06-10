@@ -152,13 +152,13 @@ your-project/
 
 ### Compatibility
 
-| Tool | Skill Path | Priority |
-|------|-----------|----------|
-| Claude Code | `.claude/skills/` | Native |
-| Codex | `.agents/skills/` | Native |
-| OpenCode | `.opencode/skills/` > `.claude/skills/` > `.agents/skills/` | Native (3-level fallback) |
+| Tool | Installed Path | Config File |
+|------|----------------|-------------|
+| Claude Code | `.claude/agents/` + `.claude/skills/` | `.claude/settings.json` |
+| Codex | `.agents/agents/` + `.agents/skills/` | `.codex/hooks.json` |
+| OpenCode | `.opencode/agents/` + `.opencode/skills/` | `.opencode/plugins/harness-hooks.ts` |
 
-Install script syncs skills to all three directories automatically.
+Source files use `{{SKILLS_DIR}}` and `{{AGENTS_DIR}}` placeholders — auto-replaced during install based on target tool.
 
 ## Sources
 
